@@ -30,6 +30,16 @@ func Run(
 		return nil, fmt.Errorf("sync: list repos: %w", err)
 	}
 
+	if cfg.Owner != "" {
+		filtered := repos[:0]
+		for _, r := range repos {
+			if r.GetOwner().GetLogin() == cfg.Owner {
+				filtered = append(filtered, r)
+			}
+		}
+		repos = filtered
+	}
+
 	// Build a map of name → repo for quick lookup.
 	repoMap := make(map[string]*gogithub.Repository, len(repos))
 	for _, r := range repos {

@@ -33,14 +33,18 @@ Flags:
       --dir string     directory containing your local clones (default "~/github")
   -h, --help           help for repo-sync
       --limit int      maximum number of repositories to process (default 200)
+      --owner string   GitHub user or org to sync (default: authenticated user)
       --token string   GitHub personal access token (overrides GITHUB_TOKEN env and gh CLI config)
 ```
 
 ### Examples
 
 ```bash
-# Sync up to 200 repos into ~/github (default)
+# Sync your own repos into ~/github (default)
 repo-sync
+
+# Sync repos for a different user or org
+repo-sync --owner myorg
 
 # Use a different directory
 repo-sync --dir ~/code
@@ -84,7 +88,7 @@ Warnings:
 
 ## How it works
 
-1. Lists all repositories for the authenticated user via the GitHub API.
+1. Lists all repositories accessible to the authenticated user via the GitHub API, then filters to those owned by `--owner` (defaults to the authenticated user's login).
 2. Clones any that are missing from the local directory (sequential, in API order).
 3. For each existing local directory, runs a concurrent worker pool (up to `NumCPU*4` workers) that:
    - Fetches and prunes remote refs

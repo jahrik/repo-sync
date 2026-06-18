@@ -231,6 +231,7 @@ func TestRunListReposError(t *testing.T) {
 
 type fakeGHClientError struct{}
 
+func (f *fakeGHClientError) Owner() string { return "" }
 func (f *fakeGHClientError) ListRepos(_ context.Context, _ int) ([]*gogithub.Repository, error) {
 	return nil, errors.New("simulated ListRepos error")
 }
@@ -340,6 +341,7 @@ type fakeGHClientWithMergedPRs struct {
 	mergedPRs []*gogithub.PullRequest
 }
 
+func (f *fakeGHClientWithMergedPRs) Owner() string { return "" }
 func (f *fakeGHClientWithMergedPRs) ListRepos(_ context.Context, _ int) ([]*gogithub.Repository, error) {
 	return f.repos, nil
 }

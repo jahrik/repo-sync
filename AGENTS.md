@@ -17,8 +17,8 @@ Go is at `~/.local/go/bin/go` on the Steam Deck. Use `PATH="$HOME/.local/go/bin:
 ```
 main.go
 cmd/root.go          — cobra entry point, flag parsing, wires up real implementations
-internal/config/     — resolves token + dir from flags / env / gh CLI hosts.yml
-internal/github/     — GitHub API client (Client interface + real implementation)
+internal/config/     — resolves token, dir, and owner from flags / env / gh CLI hosts.yml
+internal/github/     — GitHub API client (Client interface + real implementation; Owner() returns authenticated login)
 internal/git/        — git operations (Runner interface + real implementation)
 internal/sync/       — orchestration: Run(), syncOne(), Decide(), helpers
 internal/report/     — formats and prints results
@@ -58,6 +58,7 @@ internal/testutil/   — fake git binary harness for integration-style tests
 ## Non-obvious gotchas
 
 - `config.Resolve` reads `~/.config/gh/hosts.yml` to pick up the token and SSH preference from the `gh` CLI automatically. If `gh` is not installed or not logged in, it falls back to unauthenticated API calls (60 req/hr rate limit).
+- `--owner` defaults to the authenticated user's login (resolved via `GET /user` in `NewClient`). Pass a different value to sync an org or another user's public repos. The filter runs in `sync.Run` after `ListRepos` returns — repos whose `Owner.Login` doesn't match are skipped before any cloning or syncing.
 - Repos whose `origin` remote URL does not contain `github.com` are silently skipped and reported as OK. This prevents noise from non-GitHub repos in the sync directory.
 - The GitHub client's `ListMergedPRs` filters the "closed" state API response down to actually-merged PRs by checking `MergedAt != zero`. A closed-but-not-merged PR does not trigger CLEANED.
 - Coverage artifacts (`cov_*.out`, `coverage.*`) are in the working tree but not tracked by git (see `.gitignore`).
