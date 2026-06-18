@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	gogithub "github.com/google/go-github/v72/github"
 	"github.com/jahrik/repo-sync/internal/config"
 	"github.com/jahrik/repo-sync/internal/git"
-	gogithub "github.com/google/go-github/v72/github"
 )
 
 // fakeGitRunner implements git.Runner for tests.
@@ -27,8 +27,8 @@ type fakeGitRunner struct {
 	clonedNames   []string
 }
 
-func (f *fakeGitRunner) IsGitRepo(_ string) bool          { return f.isGitRepo }
-func (f *fakeGitRunner) FetchPrune(_ string) error        { return f.fetchErr }
+func (f *fakeGitRunner) IsGitRepo(_ string) bool   { return f.isGitRepo }
+func (f *fakeGitRunner) FetchPrune(_ string) error { return f.fetchErr }
 func (f *fakeGitRunner) DefaultBranch(_ string) (string, error) {
 	return f.defaultBranch, nil
 }

@@ -99,8 +99,8 @@ func (c *client) ListMergedPRs(ctx context.Context, owner, repo, branch string) 
 
 func (c *client) listPRs(ctx context.Context, owner, repo, branch, state string) ([]*gogithub.PullRequest, error) {
 	opts := &gogithub.PullRequestListOptions{
-		State: state,
-		Head:  fmt.Sprintf("%s:%s", owner, branch),
+		State:       state,
+		Head:        fmt.Sprintf("%s:%s", owner, branch),
 		ListOptions: gogithub.ListOptions{PerPage: 50},
 	}
 

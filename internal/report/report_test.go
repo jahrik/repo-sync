@@ -74,14 +74,14 @@ func TestFormatResultAllBranches(t *testing.T) {
 		absent   []string
 	}{
 		{
-			name:     "OK no branch suffix",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusOK, Branch: "main"},
-			absent:   []string{"[branch:"},
+			name:   "OK no branch suffix",
+			result: sync.RepoResult{Name: "r", Status: sync.StatusOK, Branch: "main"},
+			absent: []string{"[branch:"},
 		},
 		{
-			name:     "Cloned no branch suffix",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusCloned, Branch: "main"},
-			absent:   []string{"[branch:"},
+			name:   "Cloned no branch suffix",
+			result: sync.RepoResult{Name: "r", Status: sync.StatusCloned, Branch: "main"},
+			absent: []string{"[branch:"},
 		},
 		{
 			name:     "Behind with count and branch",

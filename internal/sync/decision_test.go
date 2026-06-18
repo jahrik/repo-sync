@@ -117,12 +117,12 @@ func TestDecideFeatureBranchUnmerged(t *testing.T) {
 // TestDecideTableDriven covers every decision branch exhaustively.
 func TestDecideTableDriven(t *testing.T) {
 	tests := []struct {
-		name       string
-		in         DecisionInput
-		wantStatus Status
-		wantAhead  int
-		wantBehind int
-		wantPRNum  int
+		name        string
+		in          DecisionInput
+		wantStatus  Status
+		wantAhead   int
+		wantBehind  int
+		wantPRNum   int
 		wantPRTitle string
 	}{
 		{
@@ -142,20 +142,20 @@ func TestDecideTableDriven(t *testing.T) {
 			wantBehind: 2,
 		},
 		{
-			name:       "feature branch open PR ahead=0 (PR wins over ahead check)",
-			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 0, OpenPRs: []*gogithub.PullRequest{openPR(1, "title")}},
-			wantStatus: StatusOpenPR,
-			wantPRNum:  1,
+			name:        "feature branch open PR ahead=0 (PR wins over ahead check)",
+			in:          DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 0, OpenPRs: []*gogithub.PullRequest{openPR(1, "title")}},
+			wantStatus:  StatusOpenPR,
+			wantPRNum:   1,
 			wantPRTitle: "title",
-			wantAhead:  0,
+			wantAhead:   0,
 		},
 		{
-			name:       "feature branch open PR ahead>0",
-			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 3, OpenPRs: []*gogithub.PullRequest{openPR(9, "big PR")}},
-			wantStatus: StatusOpenPR,
-			wantPRNum:  9,
+			name:        "feature branch open PR ahead>0",
+			in:          DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 3, OpenPRs: []*gogithub.PullRequest{openPR(9, "big PR")}},
+			wantStatus:  StatusOpenPR,
+			wantPRNum:   9,
 			wantPRTitle: "big PR",
-			wantAhead:  3,
+			wantAhead:   3,
 		},
 		{
 			name:       "feature branch no PR no ahead → cleaned",

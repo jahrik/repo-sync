@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jahrik/repo-sync/internal/config"
 	gogithub "github.com/google/go-github/v72/github"
+	"github.com/jahrik/repo-sync/internal/config"
 )
 
 // fakeGitRunnerExt extends fakeGitRunner with configurable error returns for
 // functions not covered in sync_test.go.
 type fakeGitRunnerExt struct {
 	fakeGitRunner
-	aheadBehindErr    error
-	pullErr           error
-	statusDirtyErr    error
+	aheadBehindErr error
+	pullErr        error
+	statusDirtyErr error
 }
 
 func (f *fakeGitRunnerExt) AheadBehind(_, _, _ string) (int, int, error) {
@@ -125,9 +125,9 @@ func TestSyncOneFetchError(t *testing.T) {
 	}
 
 	gitRunner := &fakeGitRunner{
-		isGitRepo:    true,
-		remoteURL:    "https://github.com/t/fetch-fail.git",
-		fetchErr:     errFetch,
+		isGitRepo:     true,
+		remoteURL:     "https://github.com/t/fetch-fail.git",
+		fetchErr:      errFetch,
 		defaultBranch: "main",
 		currentBranch: "main",
 	}

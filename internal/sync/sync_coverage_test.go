@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	gogithub "github.com/google/go-github/v72/github"
 	"github.com/jahrik/repo-sync/internal/config"
 	"github.com/jahrik/repo-sync/internal/git"
-	gogithub "github.com/google/go-github/v72/github"
 )
 
 // errRemote is a sentinel error for remote URL failures.
@@ -356,9 +356,9 @@ func TestParseOwnerRepoSSHInvalidPath(t *testing.T) {
 	tests := []struct {
 		url string
 	}{
-		{"git@github.com:/repo.git"},    // empty owner
-		{"git@github.com:owner/.git"},   // empty repo after trimming .git
-		{"git@github.com:owner/"},       // empty repo
+		{"git@github.com:/repo.git"},  // empty owner
+		{"git@github.com:owner/.git"}, // empty repo after trimming .git
+		{"git@github.com:owner/"},     // empty repo
 	}
 	for _, tc := range tests {
 		_, _, err := parseOwnerRepo(tc.url)
@@ -374,9 +374,9 @@ func TestParseOwnerRepoHTTPSEmptyComponents(t *testing.T) {
 	tests := []struct {
 		url string
 	}{
-		{"https://github.com/"},           // no owner or repo
-		{"https://github.com/owner"},      // no repo
-		{"https://github.com/owner/"},     // empty repo
+		{"https://github.com/"},       // no owner or repo
+		{"https://github.com/owner"},  // no repo
+		{"https://github.com/owner/"}, // empty repo
 	}
 	for _, tc := range tests {
 		_, _, err := parseOwnerRepo(tc.url)
