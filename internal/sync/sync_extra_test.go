@@ -50,7 +50,7 @@ func TestRunContextCancelled(t *testing.T) {
 
 	gitRunner := &fakeGitRunner{isGitRepo: false}
 	cfg := config.Config{Dir: baseDir, Limit: 10}
-	_, err := Run(ctx, cfg, gh, gitRunner, baseDir)
+	_, err := Run(ctx, cfg, gh, gitRunner, baseDir, nil, nil)
 	if err == nil {
 		t.Error("expected error from cancelled context")
 	}
@@ -68,7 +68,7 @@ func TestRunAllCloned(t *testing.T) {
 	gitRunner := &fakeGitRunner{isGitRepo: false}
 	cfg := config.Config{Dir: baseDir, Limit: 10}
 
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,9 +98,9 @@ func TestSyncOneNotGitRepo(t *testing.T) {
 	}
 
 	gitRunner := &fakeGitRunner{isGitRepo: false}
-	cfg := config.Config{Dir: baseDir, Limit: 10}
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
 
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,8 +132,8 @@ func TestSyncOneFetchError(t *testing.T) {
 		currentBranch: "main",
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,8 +172,8 @@ func TestSyncOneFeatureBranchWithOpenPR(t *testing.T) {
 		ahead:         2,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, ghWithPR, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, ghWithPR, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,8 +211,8 @@ func TestSyncOneDefaultBranchBehindPullFails(t *testing.T) {
 		pullErr: &pullError{},
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,8 +248,8 @@ func TestSyncOneDefaultBranchBehindPullSucceeds(t *testing.T) {
 		behind:        2,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,8 +281,8 @@ func TestSyncOneFeatureClean(t *testing.T) {
 		ahead:         0,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,8 +316,8 @@ func TestSyncOneParseOwnerRepoFromDirError(t *testing.T) {
 		ahead:         3,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

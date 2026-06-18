@@ -40,7 +40,6 @@ func TestParseOwnerRepoFromDirRemoteURLError(t *testing.T) {
 
 // TestSyncOneDefaultBranchBehindPullSucceedsNotDirty exercises the path where
 // the default branch was behind, pull succeeds, and status is not dirty.
-// This covers the WasBehind=true path that results in StatusBehind.
 func TestSyncOneDefaultBranchBehindPullSucceeds2(t *testing.T) {
 	baseDir := t.TempDir()
 	repoName := "behind-ok-2"
@@ -65,8 +64,8 @@ func TestSyncOneDefaultBranchBehindPullSucceeds2(t *testing.T) {
 		isDirty:       false,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,8 +97,8 @@ func TestSyncOneCurrentBranchError(t *testing.T) {
 		},
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,8 +137,8 @@ func TestSyncOneDefaultBranchError(t *testing.T) {
 		},
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +222,7 @@ func TestRunListReposError(t *testing.T) {
 	gitRunner := &fakeGitRunner{}
 	cfg := config.Config{Dir: baseDir, Limit: 10}
 
-	_, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	_, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err == nil {
 		t.Error("expected error when ListRepos fails")
 	}
@@ -326,8 +325,8 @@ func TestSyncOneFeatureBranchWithMergedPR(t *testing.T) {
 		ahead:         3,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, ghWithMergedPR, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, ghWithMergedPR, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +388,6 @@ func TestParseOwnerRepoHTTPSEmptyComponents(t *testing.T) {
 }
 
 // TestSyncOneFeatureBranchAheadNoPR covers feature branch + ahead>0 + no PRs → UNMERGED.
-// This also exercises the non-default branch ahead/behind AheadBehind call.
 func TestSyncOneFeatureBranchAhead(t *testing.T) {
 	baseDir := t.TempDir()
 	repoName := "feat-ahead"
@@ -413,8 +411,8 @@ func TestSyncOneFeatureBranchAhead(t *testing.T) {
 		behind:        1,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,3 +455,57 @@ func (f *fakeGitRunnerPanic) IsGitRepo(_ string) bool {
 
 // Ensure fakeGitRunnerPanic satisfies git.Runner interface.
 var _ git.Runner = (*fakeGitRunnerPanic)(nil)
+
+// TestSyncOneCleanActionRequiresCleanFlag verifies that the branch-switch action
+// only happens when cfg.Clean=true.
+func TestSyncOneCleanActionRequiresCleanFlag(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "clean-action"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	tracked := &checkoutTracker{
+		fakeGitRunner: fakeGitRunner{
+			isGitRepo:     true,
+			defaultBranch: "main",
+			currentBranch: "feature/done",
+			remoteURL:     "https://github.com/owner/clean-action.git",
+			ahead:         0,
+		},
+	}
+
+	// Without --clean: status is CLEANED but checkout should NOT be called.
+	cfg := config.Config{Limit: 10, Clean: false}
+	result := syncOne(context.Background(), cfg, nil, tracked, repoDir, nil)
+	if result.Status != StatusCleaned {
+		t.Errorf("status = %q, want CLEANED", result.Status)
+	}
+	if tracked.checkoutCalled {
+		t.Error("Checkout should NOT be called without --clean")
+	}
+
+	// With --clean: checkout SHOULD be called.
+	tracked.checkoutCalled = false
+	cfg.Clean = true
+	result = syncOne(context.Background(), cfg, nil, tracked, repoDir, nil)
+	if result.Status != StatusCleaned {
+		t.Errorf("status = %q, want CLEANED", result.Status)
+	}
+	if !tracked.checkoutCalled {
+		t.Error("Checkout should be called with --clean")
+	}
+}
+
+type checkoutTracker struct {
+	fakeGitRunner
+	checkoutCalled bool
+}
+
+func (c *checkoutTracker) Checkout(_, _ string) error {
+	c.checkoutCalled = true
+	return nil
+}
+
+var _ git.Runner = (*checkoutTracker)(nil)
