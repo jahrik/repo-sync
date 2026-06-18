@@ -16,14 +16,33 @@ import (
 	gogithub "github.com/google/go-github/v72/github"
 )
 
-// Run is the top-level sync orchestration.  It lists repositories, clones
-// missing ones, then fan-outs workers to sync each existing directory.
+// Run is the top-level sync orchestration.
+//
+// Default behaviour (no flags): lists repos, clones missing ones, marks
+// existing dirs as OK without touching them.
+//
+// With cfg.Pull=true  : also fetch + fast-forward-pull existing repos and
+//
+//	report their branch status (dirty, behind, open PR …).
+//
+// With cfg.Clean=true : everything in Pull, plus switch to the default branch
+//
+//	when the current branch has been merged or has no
+//	open PR and no commits ahead.
+//
+// onStart is called once after the repo list is fetched, with
+// (total, toClone, toSync) counts.  It may be nil.
+//
+// onResult is called after each repo is processed (from any goroutine).
+// It may be nil.
 func Run(
 	ctx context.Context,
 	cfg config.Config,
 	gh githubclient.Client,
 	gitRunner git.Runner,
 	baseDir string,
+	onStart func(total, clones, existing int),
+	onResult func(result RepoResult),
 ) ([]RepoResult, error) {
 	repos, err := gh.ListRepos(ctx, cfg.Limit)
 	if err != nil {
@@ -40,15 +59,34 @@ func Run(
 		repos = filtered
 	}
 
-	// Build a map of name → repo for quick lookup.
+	// Pre-scan: split into repos to clone vs existing dirs.
+	var toClone []*gogithub.Repository
+	var existingDirs []string
+	for _, r := range repos {
+		name := r.GetName()
+		if safeRepoName(name) != nil {
+			continue // will become an error result in Phase 1
+		}
+		dir := filepath.Join(baseDir, name)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			toClone = append(toClone, r)
+		} else {
+			existingDirs = append(existingDirs, dir)
+		}
+	}
+
+	if onStart != nil {
+		onStart(len(repos), len(toClone), len(existingDirs))
+	}
+
+	// Build a map of name → repo for Phase 2 lookup.
 	repoMap := make(map[string]*gogithub.Repository, len(repos))
 	for _, r := range repos {
 		repoMap[r.GetName()] = r
 	}
 
-	// Phase 1: clone missing repositories.
+	// Phase 1: clone missing repositories (always).
 	var results []RepoResult
-	var existingDirs []string
 
 	for _, r := range repos {
 		select {
@@ -59,11 +97,15 @@ func Run(
 
 		name := r.GetName()
 		if err := safeRepoName(name); err != nil {
-			results = append(results, RepoResult{
+			res := RepoResult{
 				Name:   name,
 				Status: StatusError,
 				Err:    fmt.Errorf("skipping repo with unsafe name: %w", err),
-			})
+			}
+			results = append(results, res)
+			if onResult != nil {
+				onResult(res)
+			}
 			continue
 		}
 		dir := filepath.Join(baseDir, name)
@@ -77,21 +119,33 @@ func Run(
 				status = StatusError
 				cloneErrOut = cloneErr
 			}
-			results = append(results, RepoResult{
-				Name:   name,
-				Status: status,
-				Err:    cloneErrOut,
-			})
-		} else {
-			existingDirs = append(existingDirs, dir)
+			res := RepoResult{Name: name, Status: status, Err: cloneErrOut}
+			results = append(results, res)
+			if onResult != nil {
+				onResult(res)
+			}
 		}
+		// Existing dirs are handled in Phase 2.
+	}
+
+	// Phase 2: process existing directories.
+	// Without --pull or --clean, just mark them OK and return.
+	if !cfg.Pull && !cfg.Clean {
+		for _, dir := range existingDirs {
+			res := RepoResult{Name: filepath.Base(dir), Status: StatusOK}
+			results = append(results, res)
+			if onResult != nil {
+				onResult(res)
+			}
+		}
+		return results, nil
 	}
 
 	if len(existingDirs) == 0 {
 		return results, nil
 	}
 
-	// Phase 2: worker pool for existing directories.
+	// Worker pool for existing directories.
 	workers := len(existingDirs)
 	if max := runtime.NumCPU() * 4; workers > max {
 		workers = max
@@ -108,7 +162,11 @@ func Run(
 	for i := 0; i < workers; i++ {
 		go func() {
 			for j := range jobs {
-				out <- syncOne(ctx, cfg, gh, gitRunner, j.dir, j.repo)
+				res := syncOne(ctx, cfg, gh, gitRunner, j.dir, j.repo)
+				if onResult != nil {
+					onResult(res)
+				}
+				out <- res
 			}
 		}()
 	}
@@ -126,7 +184,7 @@ func Run(
 	return results, nil
 }
 
-// syncOne processes a single repository directory.
+// syncOne processes a single existing repository directory.
 func syncOne(
 	ctx context.Context,
 	cfg config.Config,
@@ -138,7 +196,6 @@ func syncOne(
 	name := filepath.Base(dir)
 	result = RepoResult{Name: name, Status: StatusError}
 
-	// Recover from panics in worker goroutines.
 	defer func() {
 		if r := recover(); r != nil {
 			result.Err = fmt.Errorf("panic in syncOne for %s: %v", name, r)
@@ -151,7 +208,7 @@ func syncOne(
 		return result
 	}
 
-	// Check if this is a github.com repo; skip non-github remotes.
+	// Skip non-GitHub remotes.
 	_, remoteErr := gitRunner.RemoteURL(dir)
 	if errors.Is(remoteErr, git.ErrNotGitHub) {
 		result.Status = StatusOK
@@ -193,7 +250,6 @@ func syncOne(
 		if behind > 0 {
 			wasBehind = true
 			if pullErr := gitRunner.PullFFOnly(dir); pullErr != nil {
-				// Can't fast-forward; report dirty/diverged.
 				result.Status = StatusDirty
 				result.Err = pullErr
 				result.Branch = currentBranch
@@ -240,9 +296,8 @@ func syncOne(
 	decided := Decide(in)
 	decided.Name = name
 
-	// CLEANED: switch to default branch and pull. Branches are not deleted —
-	// the tool is intentionally non-destructive on the local filesystem.
-	if decided.Status == StatusCleaned {
+	// With --clean: switch to the default branch when the current branch is stale.
+	if decided.Status == StatusCleaned && cfg.Clean {
 		_ = gitRunner.Checkout(dir, defaultBranch)
 		_ = gitRunner.PullFFOnly(dir)
 	}
@@ -268,10 +323,7 @@ func cloneURLFor(r *gogithub.Repository, useSSH bool) string {
 }
 
 // safeRepoName validates that a repository name from the GitHub API is safe to
-// use as a filesystem directory name under baseDir.  It rejects names that
-// contain path separators (which would escape the base directory after
-// filepath.Join) and names that start with "-" (which git could misinterpret
-// as flags even when "--" is used by older git versions in some code paths).
+// use as a filesystem directory name under baseDir.
 func safeRepoName(name string) error {
 	if name == "" {
 		return fmt.Errorf("repo name is empty")

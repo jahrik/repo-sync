@@ -93,7 +93,7 @@ func TestRunClonesNewRepo(t *testing.T) {
 
 	gitRunner := &fakeGitRunner{isGitRepo: false}
 	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestRunClonesNewRepoSSH(t *testing.T) {
 
 	gitRunner := &fakeGitRunner{isGitRepo: false}
 	cfg := config.Config{Dir: baseDir, Limit: 10, UseSSH: true}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,8 +160,8 @@ func TestRunSyncsExistingRepoOK(t *testing.T) {
 		isDirty:       false,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,6 +170,38 @@ func TestRunSyncsExistingRepoOK(t *testing.T) {
 	}
 	if results[0].Status != StatusOK {
 		t.Errorf("status = %q, want OK", results[0].Status)
+	}
+}
+
+func TestRunExistingRepoOKWithoutPull(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "existing-no-pull"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{
+				Name:          strPtrS(repoName),
+				DefaultBranch: strPtrS("main"),
+				CloneURL:      strPtrS("https://github.com/test/existing-no-pull.git"),
+			},
+		},
+	}
+
+	gitRunner := &fakeGitRunner{isGitRepo: false} // should never be called
+	cfg := config.Config{Dir: baseDir, Limit: 10} // no Pull flag
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].Status != StatusOK {
+		t.Errorf("clone-only mode: status = %q, want OK for existing repo", results[0].Status)
 	}
 }
 
@@ -199,8 +231,8 @@ func TestRunSyncsExistingRepoDirty(t *testing.T) {
 		isDirty:       true,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,8 +265,8 @@ func TestRunSkipsNonGitHubRemote(t *testing.T) {
 		remoteURLErr: git.ErrNotGitHub,
 	}
 
-	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +295,7 @@ func TestRunHandlesCloneError(t *testing.T) {
 	}
 
 	cfg := config.Config{Dir: baseDir, Limit: 10}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,7 +333,7 @@ func TestRunOwnerFilter(t *testing.T) {
 
 	gitRunner := &fakeGitRunner{isGitRepo: false}
 	cfg := config.Config{Dir: baseDir, Limit: 10, Owner: "alice"}
-	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

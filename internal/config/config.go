@@ -16,6 +16,8 @@ type Config struct {
 	Token  string
 	UseSSH bool
 	Owner  string
+	Pull   bool // fetch + pull FF-only on existing repos
+	Clean  bool // switch to default branch when current branch is merged/stale (implies Pull)
 }
 
 // hostsEntry represents one entry under github.com in gh's hosts.yml.
