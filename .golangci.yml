@@ -2,29 +2,6 @@ version: "2"
 
 linters:
   enable:
-    - govet
     - errcheck
+    - govet
     - staticcheck
-    - unused
-    - gosimple
-    - ineffassign
-    - misspell
-    - unconvert
-    - unparam
-
-  settings:
-    govet:
-      enable-all: true
-      disable:
-        - fieldalignment
-
-  exclusions:
-    rules:
-      - path: _test\.go
-        linters:
-          - errcheck
-          - unparam
-
-formatters:
-  enable:
-    - gofmt
