@@ -26,14 +26,14 @@ func FakeGitScript(subcmdOutputs map[string]FakeOutput) string {
 	for key, out := range subcmdOutputs {
 		// Escape single-quotes in the key.
 		escaped := strings.ReplaceAll(key, "'", "'\\''")
-		sb.WriteString(fmt.Sprintf("  '%s')\n", escaped))
+		fmt.Fprintf(&sb, "  '%s')\n", escaped)
 		if out.Stdout != "" {
-			sb.WriteString(fmt.Sprintf("    printf '%%s' %q\n", out.Stdout))
+			fmt.Fprintf(&sb, "    printf '%%s' %q\n", out.Stdout)
 		}
 		if out.Stderr != "" {
-			sb.WriteString(fmt.Sprintf("    printf '%%s' %q >&2\n", out.Stderr))
+			fmt.Fprintf(&sb, "    printf '%%s' %q >&2\n", out.Stderr)
 		}
-		sb.WriteString(fmt.Sprintf("    exit %d\n    ;;\n", out.ExitCode))
+		fmt.Fprintf(&sb, "    exit %d\n    ;;\n", out.ExitCode)
 	}
 	sb.WriteString("  *)\n    echo \"fake-git: unknown args: $*\" >&2\n    exit 1\n    ;;\nesac\n")
 	return sb.String()

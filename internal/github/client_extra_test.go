@@ -13,32 +13,6 @@ import (
 	gogithub "github.com/google/go-github/v72/github"
 )
 
-// newTestServerWithUser creates a test server that responds to /user with
-// the given login and to /user/repos with an empty list, plus a custom
-// handler override map for other paths.
-func newTestServerWithUser(t *testing.T, login string, extraHandlers map[string]http.HandlerFunc) (*gogithub.Client, *httptest.Server) {
-	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if h, ok := extraHandlers[r.URL.Path]; ok {
-			h(w, r)
-			return
-		}
-		switch r.URL.Path {
-		case "/user":
-			writeJSON(w, map[string]string{"login": login})
-		case "/user/repos":
-			writeJSON(w, []*gogithub.Repository{})
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
-	return ghc, srv
-}
-
 // stubTransport redirects all outgoing HTTP(S) requests to the given target
 // host (e.g. "127.0.0.1:PORT") over plain HTTP.  This lets us intercept calls
 // made by NewClient (which builds its own *gogithub.Client internally) without

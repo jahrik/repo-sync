@@ -8,14 +8,17 @@ import (
 // TestExpandHomeErrorWhenHomeUnset exercises the os.UserHomeDir() failure branch
 // inside expandHome: when HOME is unset on Linux, UserHomeDir returns an error.
 func TestExpandHomeErrorWhenHomeUnset(t *testing.T) {
-	// Save and restore HOME so parallel tests aren't affected.
 	orig, hadOrig := os.LookupEnv("HOME")
-	os.Unsetenv("HOME")
+	if err := os.Unsetenv("HOME"); err != nil {
+		t.Fatalf("unsetenv HOME: %v", err)
+	}
 	t.Cleanup(func() {
 		if hadOrig {
-			os.Setenv("HOME", orig)
+			if err := os.Setenv("HOME", orig); err != nil {
+				t.Errorf("restore HOME: %v", err)
+			}
 		} else {
-			os.Unsetenv("HOME")
+			_ = os.Unsetenv("HOME")
 		}
 	})
 
@@ -29,12 +32,16 @@ func TestExpandHomeErrorWhenHomeUnset(t *testing.T) {
 // fails (dir starts with ~ but HOME is unset).
 func TestResolveExpandHomeFails(t *testing.T) {
 	orig, hadOrig := os.LookupEnv("HOME")
-	os.Unsetenv("HOME")
+	if err := os.Unsetenv("HOME"); err != nil {
+		t.Fatalf("unsetenv HOME: %v", err)
+	}
 	t.Cleanup(func() {
 		if hadOrig {
-			os.Setenv("HOME", orig)
+			if err := os.Setenv("HOME", orig); err != nil {
+				t.Errorf("restore HOME: %v", err)
+			}
 		} else {
-			os.Unsetenv("HOME")
+			_ = os.Unsetenv("HOME")
 		}
 	})
 
@@ -48,12 +55,16 @@ func TestResolveExpandHomeFails(t *testing.T) {
 // inside tokenFromGHHosts.
 func TestTokenFromGHHostsHomeUnset(t *testing.T) {
 	orig, hadOrig := os.LookupEnv("HOME")
-	os.Unsetenv("HOME")
+	if err := os.Unsetenv("HOME"); err != nil {
+		t.Fatalf("unsetenv HOME: %v", err)
+	}
 	t.Cleanup(func() {
 		if hadOrig {
-			os.Setenv("HOME", orig)
+			if err := os.Setenv("HOME", orig); err != nil {
+				t.Errorf("restore HOME: %v", err)
+			}
 		} else {
-			os.Unsetenv("HOME")
+			_ = os.Unsetenv("HOME")
 		}
 	})
 

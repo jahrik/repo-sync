@@ -24,7 +24,7 @@ var categoryOrder = map[sync.Status]int{
 // Print writes a formatted report of sync results to w.
 func Print(results []sync.RepoResult, w io.Writer) {
 	if len(results) == 0 {
-		fmt.Fprintln(w, "No repositories processed.")
+		_, _ = fmt.Fprintln(w, "No repositories processed.")
 		return
 	}
 
@@ -49,12 +49,12 @@ func Print(results []sync.RepoResult, w io.Writer) {
 	// Print each result.
 	for _, r := range sorted {
 		line := formatResult(r)
-		fmt.Fprintln(w, line)
+		_, _ = fmt.Fprintln(w, line)
 	}
 
 	// Summary line.
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Summary: %d repos", len(results))
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintf(w, "Summary: %d repos", len(results))
 	orderedStatuses := []sync.Status{
 		sync.StatusCloned,
 		sync.StatusBehind,
@@ -67,10 +67,10 @@ func Print(results []sync.RepoResult, w io.Writer) {
 	}
 	for _, s := range orderedStatuses {
 		if n := counts[s]; n > 0 {
-			fmt.Fprintf(w, " | %s: %d", s, n)
+			_, _ = fmt.Fprintf(w, " | %s: %d", s, n)
 		}
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 
 	// Warnings.
 	var warnings []string
@@ -84,40 +84,40 @@ func Print(results []sync.RepoResult, w io.Writer) {
 		warnings = append(warnings, fmt.Sprintf("%d repo(s) have uncommitted changes", n))
 	}
 	if len(warnings) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Warnings:")
+		_, _ = fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w, "Warnings:")
 		for _, msg := range warnings {
-			fmt.Fprintf(w, "  ! %s\n", msg)
+			_, _ = fmt.Fprintf(w, "  ! %s\n", msg)
 		}
 	}
 }
 
 func formatResult(r sync.RepoResult) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("  %-12s  %s", r.Status, r.Name))
+	fmt.Fprintf(&sb, "  %-12s  %s", r.Status, r.Name)
 
 	switch r.Status {
 	case sync.StatusOpenPR:
-		sb.WriteString(fmt.Sprintf("  [#%d: %s]", r.PRNumber, r.PRTitle))
+		fmt.Fprintf(&sb, "  [#%d: %s]", r.PRNumber, r.PRTitle)
 		if r.Ahead > 0 {
-			sb.WriteString(fmt.Sprintf(" (+%d)", r.Ahead))
+			fmt.Fprintf(&sb, " (+%d)", r.Ahead)
 		}
 	case sync.StatusBehind:
 		if r.Behind > 0 {
-			sb.WriteString(fmt.Sprintf(" (↓%d)", r.Behind))
+			fmt.Fprintf(&sb, " (↓%d)", r.Behind)
 		}
 	case sync.StatusUnmerged:
 		if r.Ahead > 0 {
-			sb.WriteString(fmt.Sprintf(" (+%d ahead, no PR)", r.Ahead))
+			fmt.Fprintf(&sb, " (+%d ahead, no PR)", r.Ahead)
 		}
 	case sync.StatusError:
 		if r.Err != nil {
-			sb.WriteString(fmt.Sprintf("  ERR: %v", r.Err))
+			fmt.Fprintf(&sb, "  ERR: %v", r.Err)
 		}
 	}
 
 	if r.Branch != "" && r.Status != sync.StatusOK && r.Status != sync.StatusCloned {
-		sb.WriteString(fmt.Sprintf("  [branch: %s]", r.Branch))
+		fmt.Fprintf(&sb, "  [branch: %s]", r.Branch)
 	}
 
 	return sb.String()
