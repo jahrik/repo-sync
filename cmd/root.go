@@ -29,6 +29,12 @@ cleans up merged feature branches, and reports on open PRs and unmerged work.`,
 	RunE:         run,
 }
 
+// SetVersion wires build-time version information into the root command so
+// that "repo-sync --version" prints meaningful output.  Called from main.
+func SetVersion(version, commit, date string) {
+	rootCmd.Version = fmt.Sprintf("%s (commit %s, built %s)", version, commit, date)
+}
+
 // Execute is the entry point called from main.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {

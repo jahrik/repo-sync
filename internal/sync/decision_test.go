@@ -113,3 +113,95 @@ func TestDecideFeatureBranchUnmerged(t *testing.T) {
 		t.Errorf("status = %q, want UNMERGED", got.Status)
 	}
 }
+
+// TestDecideTableDriven covers every decision branch exhaustively.
+func TestDecideTableDriven(t *testing.T) {
+	tests := []struct {
+		name       string
+		in         DecisionInput
+		wantStatus Status
+		wantAhead  int
+		wantBehind int
+		wantPRNum  int
+		wantPRTitle string
+	}{
+		{
+			name:       "default branch clean",
+			in:         DecisionInput{CurrentBranch: "main", IsOnDefault: true},
+			wantStatus: StatusOK,
+		},
+		{
+			name:       "default branch dirty",
+			in:         DecisionInput{CurrentBranch: "main", IsOnDefault: true, IsDirty: true},
+			wantStatus: StatusDirty,
+		},
+		{
+			name:       "default branch was behind",
+			in:         DecisionInput{CurrentBranch: "main", IsOnDefault: true, WasBehind: true, Behind: 2},
+			wantStatus: StatusBehind,
+			wantBehind: 2,
+		},
+		{
+			name:       "feature branch open PR ahead=0 (PR wins over ahead check)",
+			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 0, OpenPRs: []*gogithub.PullRequest{openPR(1, "title")}},
+			wantStatus: StatusOpenPR,
+			wantPRNum:  1,
+			wantPRTitle: "title",
+			wantAhead:  0,
+		},
+		{
+			name:       "feature branch open PR ahead>0",
+			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 3, OpenPRs: []*gogithub.PullRequest{openPR(9, "big PR")}},
+			wantStatus: StatusOpenPR,
+			wantPRNum:  9,
+			wantPRTitle: "big PR",
+			wantAhead:  3,
+		},
+		{
+			name:       "feature branch no PR no ahead → cleaned",
+			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 0},
+			wantStatus: StatusCleaned,
+		},
+		{
+			name:       "feature branch ahead with merged PR → cleaned",
+			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 2, MergedPRs: []*gogithub.PullRequest{mergedPR(3)}},
+			wantStatus: StatusCleaned,
+		},
+		{
+			name:       "feature branch ahead no PR → unmerged",
+			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 7},
+			wantStatus: StatusUnmerged,
+		},
+		{
+			name:       "branch and ahead/behind propagated",
+			in:         DecisionInput{CurrentBranch: "fix/bug", IsOnDefault: false, Ahead: 4, Behind: 1},
+			wantStatus: StatusUnmerged,
+			wantAhead:  4,
+			wantBehind: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Decide(tc.in)
+			if got.Status != tc.wantStatus {
+				t.Errorf("Status = %q, want %q", got.Status, tc.wantStatus)
+			}
+			if tc.wantPRNum != 0 && got.PRNumber != tc.wantPRNum {
+				t.Errorf("PRNumber = %d, want %d", got.PRNumber, tc.wantPRNum)
+			}
+			if tc.wantPRTitle != "" && got.PRTitle != tc.wantPRTitle {
+				t.Errorf("PRTitle = %q, want %q", got.PRTitle, tc.wantPRTitle)
+			}
+			if tc.wantAhead != 0 && got.Ahead != tc.wantAhead {
+				t.Errorf("Ahead = %d, want %d", got.Ahead, tc.wantAhead)
+			}
+			if tc.wantBehind != 0 && got.Behind != tc.wantBehind {
+				t.Errorf("Behind = %d, want %d", got.Behind, tc.wantBehind)
+			}
+			if got.Branch != tc.in.CurrentBranch {
+				t.Errorf("Branch = %q, want %q", got.Branch, tc.in.CurrentBranch)
+			}
+		})
+	}
+}

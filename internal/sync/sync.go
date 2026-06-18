@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/jahrik/repo-sync/internal/config"
 	"github.com/jahrik/repo-sync/internal/git"
@@ -47,6 +48,14 @@ func Run(
 		}
 
 		name := r.GetName()
+		if err := safeRepoName(name); err != nil {
+			results = append(results, RepoResult{
+				Name:   name,
+				Status: StatusError,
+				Err:    fmt.Errorf("skipping repo with unsafe name: %w", err),
+			})
+			continue
+		}
 		dir := filepath.Join(baseDir, name)
 
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -247,4 +256,25 @@ func cloneURLFor(r *gogithub.Repository, useSSH bool) string {
 		return r.GetSSHURL()
 	}
 	return r.GetCloneURL()
+}
+
+// safeRepoName validates that a repository name from the GitHub API is safe to
+// use as a filesystem directory name under baseDir.  It rejects names that
+// contain path separators (which would escape the base directory after
+// filepath.Join) and names that start with "-" (which git could misinterpret
+// as flags even when "--" is used by older git versions in some code paths).
+func safeRepoName(name string) error {
+	if name == "" {
+		return fmt.Errorf("repo name is empty")
+	}
+	if strings.ContainsRune(name, '/') || strings.ContainsRune(name, os.PathSeparator) {
+		return fmt.Errorf("repo name %q contains a path separator", name)
+	}
+	if strings.HasPrefix(name, "-") {
+		return fmt.Errorf("repo name %q starts with '-'", name)
+	}
+	if name == "." || name == ".." {
+		return fmt.Errorf("repo name %q is a reserved path component", name)
+	}
+	return nil
 }

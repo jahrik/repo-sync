@@ -139,7 +139,9 @@ func (r *runner) PullFFOnly(dir string) error {
 }
 
 func (r *runner) DeleteLocalBranch(dir, branch string) error {
-	_, err := run(dir, "branch", "-d", branch)
+	// -D force-deletes regardless of git's own merge check; callers are
+	// responsible for ensuring the branch is safe to delete before calling this.
+	_, err := run(dir, "branch", "-D", branch)
 	if err != nil {
 		return fmt.Errorf("git delete-local-branch in %s: %w", dir, err)
 	}
@@ -181,14 +183,19 @@ func (r *runner) GoneBranches(dir string) ([]string, error) {
 	var branches []string
 	for _, line := range strings.Split(out, "\n") {
 		if strings.Contains(line, ": gone]") {
-			// Format: "  branch-name  abc1234 [origin/branch-name: gone] ..."
 			fields := strings.Fields(line)
-			if len(fields) > 0 {
-				name := strings.TrimPrefix(fields[0], "*")
-				name = strings.TrimSpace(name)
-				if name != "" {
-					branches = append(branches, name)
+			if len(fields) == 0 {
+				continue
+			}
+			name := fields[0]
+			if name == "*" {
+				if len(fields) < 2 {
+					continue
 				}
+				name = fields[1]
+			}
+			if name != "" {
+				branches = append(branches, name)
 			}
 		}
 	}
@@ -204,7 +211,9 @@ func (r *runner) StatusDirty(dir string) (bool, error) {
 }
 
 func (r *runner) Clone(parentDir, cloneURL, name string) error {
-	_, err := run(parentDir, "clone", "--quiet", cloneURL, name)
+	// "--" separates options from positional arguments, preventing a name that
+	// starts with "-" from being misinterpreted as a git flag.
+	_, err := run(parentDir, "clone", "--quiet", "--", cloneURL, name)
 	if err != nil {
 		return fmt.Errorf("git clone %s: %w", name, err)
 	}
