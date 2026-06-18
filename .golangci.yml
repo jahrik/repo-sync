@@ -13,15 +13,15 @@ linters:
     - unconvert
     - unparam
 
-linters-settings:
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
 
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - unparam
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - unparam
