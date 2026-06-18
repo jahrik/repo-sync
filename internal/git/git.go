@@ -20,7 +20,6 @@ type Runner interface {
 	CurrentBranch(dir string) (string, error)
 	RemoteURL(dir string) (string, error)
 	AheadBehind(dir, branch, defaultBranch string) (ahead, behind int, err error)
-	Checkout(dir, branch string) error
 	PullFFOnly(dir string) error
 	MergedBranches(dir, defaultBranch string) ([]string, error)
 	GoneBranches(dir string) ([]string, error)
@@ -118,14 +117,6 @@ func (r *runner) AheadBehind(dir, branch, defaultBranch string) (ahead, behind i
 		return 0, 0, fmt.Errorf("git AheadBehind in %s: parse error %q", dir, out)
 	}
 	return a, b, nil
-}
-
-func (r *runner) Checkout(dir, branch string) error {
-	_, err := run(dir, "checkout", branch)
-	if err != nil {
-		return fmt.Errorf("git checkout in %s: %w", dir, err)
-	}
-	return nil
 }
 
 func (r *runner) PullFFOnly(dir string) error {

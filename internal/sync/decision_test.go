@@ -44,10 +44,18 @@ func TestDecideOnDefaultDirty(t *testing.T) {
 }
 
 func TestDecideOnDefaultBehind(t *testing.T) {
-	in := DecisionInput{IsOnDefault: true, WasBehind: true}
+	in := DecisionInput{IsOnDefault: true, WasBehind: true, DidPull: false}
 	got := Decide(in)
 	if got.Status != StatusBehind {
 		t.Errorf("status = %q, want BEHIND", got.Status)
+	}
+}
+
+func TestDecideOnDefaultPulled(t *testing.T) {
+	in := DecisionInput{IsOnDefault: true, WasBehind: true, DidPull: true}
+	got := Decide(in)
+	if got.Status != StatusPulled {
+		t.Errorf("status = %q, want PULLED", got.Status)
 	}
 }
 
@@ -82,8 +90,8 @@ func TestDecideFeatureBranchNoAheadNoPR(t *testing.T) {
 		Ahead:         0,
 	}
 	got := Decide(in)
-	if got.Status != StatusCleaned {
-		t.Errorf("status = %q, want CLEANED", got.Status)
+	if got.Status != StatusSynced {
+		t.Errorf("status = %q, want SYNCED", got.Status)
 	}
 }
 
@@ -96,8 +104,8 @@ func TestDecideFeatureBranchAheadMergedPR(t *testing.T) {
 		MergedPRs:     []*gogithub.PullRequest{mergedPR(10)},
 	}
 	got := Decide(in)
-	if got.Status != StatusCleaned {
-		t.Errorf("status = %q, want CLEANED", got.Status)
+	if got.Status != StatusSynced {
+		t.Errorf("status = %q, want SYNCED", got.Status)
 	}
 }
 
@@ -136,9 +144,15 @@ func TestDecideTableDriven(t *testing.T) {
 			wantStatus: StatusDirty,
 		},
 		{
-			name:       "default branch was behind",
-			in:         DecisionInput{CurrentBranch: "main", IsOnDefault: true, WasBehind: true, Behind: 2},
+			name:       "default branch was behind (fetch only, not pulled)",
+			in:         DecisionInput{CurrentBranch: "main", IsOnDefault: true, WasBehind: true, DidPull: false, Behind: 2},
 			wantStatus: StatusBehind,
+			wantBehind: 2,
+		},
+		{
+			name:       "default branch was behind and pulled",
+			in:         DecisionInput{CurrentBranch: "main", IsOnDefault: true, WasBehind: true, DidPull: true, Behind: 2},
+			wantStatus: StatusPulled,
 			wantBehind: 2,
 		},
 		{
@@ -160,12 +174,12 @@ func TestDecideTableDriven(t *testing.T) {
 		{
 			name:       "feature branch no PR no ahead → cleaned",
 			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 0},
-			wantStatus: StatusCleaned,
+			wantStatus: StatusSynced,
 		},
 		{
 			name:       "feature branch ahead with merged PR → cleaned",
 			in:         DecisionInput{CurrentBranch: "feat", IsOnDefault: false, Ahead: 2, MergedPRs: []*gogithub.PullRequest{mergedPR(3)}},
-			wantStatus: StatusCleaned,
+			wantStatus: StatusSynced,
 		},
 		{
 			name:       "feature branch ahead no PR → unmerged",

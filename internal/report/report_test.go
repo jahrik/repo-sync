@@ -31,14 +31,14 @@ func TestPrintSummaryLine(t *testing.T) {
 	if !strings.Contains(out, "4 repos") {
 		t.Errorf("expected '4 repos' in output, got:\n%s", out)
 	}
-	if !strings.Contains(out, "OK: 2") {
-		t.Errorf("expected 'OK: 2' in output, got:\n%s", out)
+	if !strings.Contains(out, "OK 2") {
+		t.Errorf("expected 'OK 2' in output, got:\n%s", out)
 	}
-	if !strings.Contains(out, "BEHIND: 1") {
-		t.Errorf("expected 'BEHIND: 1' in output, got:\n%s", out)
+	if !strings.Contains(out, "BEHIND 1") {
+		t.Errorf("expected 'BEHIND 1' in output, got:\n%s", out)
 	}
-	if !strings.Contains(out, "CLONED: 1") {
-		t.Errorf("expected 'CLONED: 1' in output, got:\n%s", out)
+	if !strings.Contains(out, "CLONED 1") {
+		t.Errorf("expected 'CLONED 1' in output, got:\n%s", out)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestPrintWarnings(t *testing.T) {
 	if !strings.Contains(out, "unmerged commits") {
 		t.Errorf("expected unmerged warning, got:\n%s", out)
 	}
-	if !strings.Contains(out, "uncommitted changes") {
+	if !strings.Contains(out, "uncommitted") {
 		t.Errorf("expected dirty warning, got:\n%s", out)
 	}
 }
@@ -74,68 +74,80 @@ func TestFormatResultAllBranches(t *testing.T) {
 		absent   []string
 	}{
 		{
-			name:   "OK no branch suffix",
-			result: sync.RepoResult{Name: "r", Status: sync.StatusOK, Branch: "main"},
-			absent: []string{"[branch:"},
+			name:   "OK no branch detail",
+			result: sync.RepoResult{Name: "r", Status: sync.StatusOK, Branch: "main", DefaultBranch: "main"},
+			// OK never shows branch detail
+			absent: []string{"main"},
 		},
 		{
-			name:   "Cloned no branch suffix",
-			result: sync.RepoResult{Name: "r", Status: sync.StatusCloned, Branch: "main"},
-			absent: []string{"[branch:"},
+			name:   "Cloned no branch detail",
+			result: sync.RepoResult{Name: "r", Status: sync.StatusCloned, Branch: "main", DefaultBranch: "main"},
+			absent: []string{"main"},
 		},
 		{
-			name:     "Behind with count and branch",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusBehind, Behind: 3, Branch: "main"},
-			contains: []string{"↓3", "[branch: main]"},
+			name:   "Behind on default shows count and branch",
+			result: sync.RepoResult{Name: "r", Status: sync.StatusBehind, Behind: 3, Branch: "main", DefaultBranch: "main"},
+			// On default branch: just branch name + count (no arrow)
+			contains: []string{"main", "↓3"},
 		},
 		{
 			name:     "Behind zero shows branch only",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusBehind, Behind: 0, Branch: "main"},
-			contains: []string{"[branch: main]"},
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusBehind, Behind: 0, Branch: "main", DefaultBranch: "main"},
+			contains: []string{"main"},
 			absent:   []string{"↓0"},
 		},
 		{
-			name:     "OpenPR with ahead and branch",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusOpenPR, PRNumber: 7, PRTitle: "My PR", Ahead: 2, Branch: "feat"},
-			contains: []string{"[#7: My PR]", "(+2)", "[branch: feat]"},
+			name:     "OpenPR on feature branch shows arrow and PR",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusOpenPR, PRNumber: 7, PRTitle: "My PR", Ahead: 2, Branch: "feat", DefaultBranch: "main"},
+			contains: []string{"feat", "→", "main", "#7 My PR", "+2"},
 		},
 		{
-			name:     "OpenPR zero ahead no ahead suffix",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusOpenPR, PRNumber: 5, PRTitle: "x", Ahead: 0, Branch: "feat"},
-			contains: []string{"[#5: x]"},
-			absent:   []string{"(+0)"},
+			name:     "OpenPR zero ahead no ahead count",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusOpenPR, PRNumber: 5, PRTitle: "x", Ahead: 0, Branch: "feat", DefaultBranch: "main"},
+			contains: []string{"feat", "#5 x"},
+			absent:   []string{"+0"},
 		},
 		{
-			name:     "Unmerged with ahead and branch",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusUnmerged, Ahead: 4, Branch: "wip"},
-			contains: []string{"+4 ahead, no PR", "[branch: wip]"},
+			name:     "Unmerged shows ahead and no PR",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusUnmerged, Ahead: 4, Branch: "wip", DefaultBranch: "main"},
+			contains: []string{"wip", "→", "main", "+4 ahead", "no PR"},
 		},
 		{
-			name:     "Unmerged zero ahead no suffix",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusUnmerged, Ahead: 0, Branch: "wip"},
-			contains: []string{"[branch: wip]"},
+			name:     "Unmerged zero ahead still shows no PR",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusUnmerged, Ahead: 0, Branch: "wip", DefaultBranch: "main"},
+			contains: []string{"wip", "no PR"},
 			absent:   []string{"+0 ahead"},
 		},
 		{
-			name:     "Error with err message",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusError, Err: fmt.Errorf("boom"), Branch: "main"},
-			contains: []string{"ERR: boom", "[branch: main]"},
+			name:     "Dirty uncommitted shows uncommitted label",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusDirty, Branch: "main", DefaultBranch: "main"},
+			contains: []string{"main", "uncommitted"},
 		},
 		{
-			name:     "Error with nil err",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusError, Branch: "main"},
-			contains: []string{"[branch: main]"},
+			name:     "Dirty diverged shows counts and diverged label",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusDirty, Err: fmt.Errorf("pull failed"), Ahead: 2, Behind: 3, Branch: "main", DefaultBranch: "main"},
+			contains: []string{"main", "↑2 ↓3", "diverged"},
+		},
+		{
+			name:     "Error with message",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusError, Err: fmt.Errorf("boom"), Branch: "main", DefaultBranch: "main"},
+			contains: []string{"main", "ERR:", "boom"},
+		},
+		{
+			name:     "Error with nil err shows branch only",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusError, Branch: "main", DefaultBranch: "main"},
+			contains: []string{"main"},
 			absent:   []string{"ERR:"},
 		},
 		{
-			name:     "Dirty shows branch",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusDirty, Branch: "main"},
-			contains: []string{"[branch: main]"},
+			name:     "Synced on feature shows arrow",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusSynced, Branch: "feat", DefaultBranch: "main"},
+			contains: []string{"feat", "→", "main"},
 		},
 		{
-			name:     "Cleaned shows branch",
-			result:   sync.RepoResult{Name: "r", Status: sync.StatusCleaned, Branch: "feat"},
-			contains: []string{"[branch: feat]"},
+			name:     "Stale branches listed",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusOK, StaleBranches: []string{"old-branch", "other"}},
+			contains: []string{"stale:", "old-branch", "other"},
 		},
 	}
 
@@ -169,7 +181,6 @@ func TestPrintSortOrder(t *testing.T) {
 	Print(results, &buf)
 	out := buf.String()
 
-	// a-cloned and b-cloned should appear before z-ok and m-dirty.
 	idxACloned := strings.Index(out, "a-cloned")
 	idxBCloned := strings.Index(out, "b-cloned")
 	idxZOK := strings.Index(out, "z-ok")

@@ -11,13 +11,61 @@ import (
 
 // Config holds resolved runtime configuration.
 type Config struct {
-	Dir    string
-	Limit  int
-	Token  string
-	UseSSH bool
-	Owner  string
-	Pull   bool // fetch + pull FF-only on existing repos
-	Clean  bool // switch to default branch when current branch is merged/stale (implies Pull)
+	Dir           string
+	Limit         int
+	Token         string
+	UseSSH        bool
+	Owner         string
+	Fetch         bool   // fetch + prune existing repos, report status (no writes)
+	Pull          bool   // fetch + fast-forward pull existing repos
+	SkipForks     bool   // exclude forked repositories
+	SkipArchived  bool   // exclude archived repositories
+	ReportOrphans bool   // report local dirs with no matching GitHub repo
+	Format        string // output format: "text" (default) or "json"
+	Filter        string // regexp to match against repo name (empty = all)
+}
+
+// FileConfig holds values that can be set in a config file.
+// All fields are pointers so we can distinguish "set" from "zero value".
+type FileConfig struct {
+	Dir           *string `yaml:"dir"`
+	Limit         *int    `yaml:"limit"`
+	Token         *string `yaml:"token"`
+	Owner         *string `yaml:"owner"`
+	Pull          *bool   `yaml:"pull"`
+	Fetch         *bool   `yaml:"fetch"`
+	SkipForks     *bool   `yaml:"skip_forks"`
+	SkipArchived  *bool   `yaml:"skip_archived"`
+	ReportOrphans *bool   `yaml:"report_orphans"`
+	Format        *string `yaml:"format"`
+	Filter        *string `yaml:"filter"`
+}
+
+// LoadFileConfig reads the first config file found: .repo-sync.yml in the
+// current directory, then ~/.config/repo-sync/config.yml. Returns an empty
+// FileConfig (not an error) when no file exists.
+func LoadFileConfig() (FileConfig, error) {
+	var fc FileConfig
+
+	candidates := []string{".repo-sync.yml"}
+	if home, err := os.UserHomeDir(); err == nil {
+		candidates = append(candidates, filepath.Join(home, ".config", "repo-sync", "config.yml"))
+	}
+
+	for _, path := range candidates {
+		data, err := os.ReadFile(path)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return fc, fmt.Errorf("config: read %s: %w", path, err)
+		}
+		if err := yaml.Unmarshal(data, &fc); err != nil {
+			return fc, fmt.Errorf("config: parse %s: %w", path, err)
+		}
+		return fc, nil
+	}
+	return fc, nil
 }
 
 // hostsEntry represents one entry under github.com in gh's hosts.yml.

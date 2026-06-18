@@ -1,0 +1,6 @@
+dir: ~/github
+limit: 200
+skip_forks: true
+skip_archived: true
+report_orphans: true
+format: text

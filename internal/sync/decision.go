@@ -13,6 +13,8 @@ func Decide(in DecisionInput) RepoResult {
 		switch {
 		case in.IsDirty:
 			result.Status = StatusDirty
+		case in.WasBehind && in.DidPull:
+			result.Status = StatusPulled
 		case in.WasBehind:
 			result.Status = StatusBehind
 		default:
@@ -37,11 +39,11 @@ func Decide(in DecisionInput) RepoResult {
 
 	case in.Ahead == 0 && len(in.OpenPRs) == 0:
 		// No commits ahead, no open PR → branch can be cleaned up.
-		result.Status = StatusCleaned
+		result.Status = StatusSynced
 
 	case in.Ahead > 0 && len(in.OpenPRs) == 0 && len(in.MergedPRs) > 0:
 		// All commits landed via a merged PR → clean up.
-		result.Status = StatusCleaned
+		result.Status = StatusSynced
 
 	case in.Ahead > 0 && len(in.OpenPRs) == 0 && len(in.MergedPRs) == 0:
 		result.Status = StatusUnmerged
