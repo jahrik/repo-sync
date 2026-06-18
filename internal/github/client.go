@@ -11,6 +11,7 @@ import (
 
 // Client abstracts the GitHub API calls used by repo-sync.
 type Client interface {
+	Owner() string
 	ListRepos(ctx context.Context, limit int) ([]*gogithub.Repository, error)
 	ListOpenPRs(ctx context.Context, owner, repo, branch string) ([]*gogithub.PullRequest, error)
 	ListMergedPRs(ctx context.Context, owner, repo, branch string) ([]*gogithub.PullRequest, error)
@@ -47,6 +48,9 @@ func NewClient(token string) (Client, error) {
 
 	return &client{gh: ghc, owner: owner}, nil
 }
+
+// Owner returns the authenticated user's GitHub login.
+func (c *client) Owner() string { return c.owner }
 
 // ListRepos returns up to limit repositories owned by the authenticated user.
 func (c *client) ListRepos(ctx context.Context, limit int) ([]*gogithub.Repository, error) {

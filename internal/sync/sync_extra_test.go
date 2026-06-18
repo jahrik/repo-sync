@@ -374,6 +374,7 @@ type fakeGHClientWithPRs struct {
 	openPRs []*gogithub.PullRequest
 }
 
+func (f *fakeGHClientWithPRs) Owner() string { return "" }
 func (f *fakeGHClientWithPRs) ListRepos(_ context.Context, _ int) ([]*gogithub.Repository, error) {
 	return f.repos, nil
 }

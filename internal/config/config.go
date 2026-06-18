@@ -15,6 +15,7 @@ type Config struct {
 	Limit  int
 	Token  string
 	UseSSH bool
+	Owner  string
 }
 
 // hostsEntry represents one entry under github.com in gh's hosts.yml.

@@ -18,6 +18,7 @@ var (
 	flagDir   string
 	flagLimit int
 	flagToken string
+	flagOwner string
 )
 
 var rootCmd = &cobra.Command{
@@ -46,6 +47,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagDir, "dir", "~/github", "directory containing your local clones")
 	rootCmd.PersistentFlags().IntVar(&flagLimit, "limit", 200, "maximum number of repositories to process")
 	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "GitHub personal access token (overrides GITHUB_TOKEN env and gh CLI config)")
+	rootCmd.PersistentFlags().StringVar(&flagOwner, "owner", "", "GitHub user or org to sync (default: authenticated user)")
 }
 
 func run(cmd *cobra.Command, _ []string) error {
@@ -60,6 +62,12 @@ func run(cmd *cobra.Command, _ []string) error {
 	gh, err := githubclient.NewClient(cfg.Token)
 	if err != nil {
 		return fmt.Errorf("github client: %w", err)
+	}
+
+	if flagOwner != "" {
+		cfg.Owner = flagOwner
+	} else {
+		cfg.Owner = gh.Owner()
 	}
 
 	gitRunner := git.NewRunner()

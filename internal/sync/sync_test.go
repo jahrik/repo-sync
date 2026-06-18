@@ -63,6 +63,7 @@ type fakeGHClient struct {
 	repos []*gogithub.Repository
 }
 
+func (f *fakeGHClient) Owner() string { return "" }
 func (f *fakeGHClient) ListRepos(_ context.Context, _ int) ([]*gogithub.Repository, error) {
 	return f.repos, nil
 }
@@ -271,5 +272,43 @@ func TestRunHandlesCloneError(t *testing.T) {
 	}
 	if results[0].Err == nil {
 		t.Error("expected non-nil Err for clone failure")
+	}
+}
+
+func TestRunOwnerFilter(t *testing.T) {
+	baseDir := t.TempDir()
+
+	ownerPtr := func(s string) *gogithub.User { u := &gogithub.User{}; login := s; u.Login = &login; return u }
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{
+				Name:          strPtrS("my-repo"),
+				DefaultBranch: strPtrS("main"),
+				CloneURL:      strPtrS("https://github.com/alice/my-repo.git"),
+				SSHURL:        strPtrS("git@github.com:alice/my-repo.git"),
+				Owner:         ownerPtr("alice"),
+			},
+			{
+				Name:          strPtrS("org-repo"),
+				DefaultBranch: strPtrS("main"),
+				CloneURL:      strPtrS("https://github.com/SomeOrg/org-repo.git"),
+				SSHURL:        strPtrS("git@github.com:SomeOrg/org-repo.git"),
+				Owner:         ownerPtr("SomeOrg"),
+			},
+		},
+	}
+
+	gitRunner := &fakeGitRunner{isGitRepo: false}
+	cfg := config.Config{Dir: baseDir, Limit: 10, Owner: "alice"}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result after owner filter, got %d", len(results))
+	}
+	if results[0].Name != "my-repo" {
+		t.Errorf("expected my-repo, got %s", results[0].Name)
 	}
 }
