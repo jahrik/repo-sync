@@ -45,4 +45,4 @@ release:
     name: repo-sync
   draft: false
   prerelease: auto
-  replace_existing: true
+  mode: replace
