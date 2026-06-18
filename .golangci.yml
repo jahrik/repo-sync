@@ -8,7 +8,6 @@ linters:
     - unused
     - gosimple
     - ineffassign
-    - gofmt
     - misspell
     - unconvert
     - unparam
@@ -25,3 +24,7 @@ linters:
         linters:
           - errcheck
           - unparam
+
+formatters:
+  enable:
+    - gofmt
