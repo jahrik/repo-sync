@@ -124,38 +124,6 @@ func TestAheadBehindError(t *testing.T) {
 	}
 }
 
-func TestCheckout(t *testing.T) {
-	r := NewRunner()
-	dir := initRepo(t)
-
-	// Create a second branch.
-	cmd := exec.Command("git", "branch", "other")
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("create branch: %v: %s", err, out)
-	}
-
-	if err := r.Checkout(dir, "other"); err != nil {
-		t.Fatalf("Checkout: %v", err)
-	}
-
-	branch, err := r.CurrentBranch(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if branch != "other" {
-		t.Errorf("after Checkout branch = %q, want other", branch)
-	}
-}
-
-func TestCheckoutError(t *testing.T) {
-	r := NewRunner()
-	dir := initRepo(t)
-	if err := r.Checkout(dir, "nonexistent-branch-xyz"); err == nil {
-		t.Error("expected error from Checkout to nonexistent branch")
-	}
-}
-
 func TestPullFFOnly(t *testing.T) {
 	r := NewRunner()
 	dir := initRepoWithRemote(t)

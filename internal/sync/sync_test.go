@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	gogithub "github.com/google/go-github/v72/github"
@@ -14,6 +15,7 @@ import (
 
 // fakeGitRunner implements git.Runner for tests.
 type fakeGitRunner struct {
+	mu            sync.Mutex
 	isGitRepo     bool
 	fetchErr      error
 	defaultBranch string
@@ -41,8 +43,7 @@ func (f *fakeGitRunner) RemoteURL(_ string) (string, error) {
 func (f *fakeGitRunner) AheadBehind(_, _, _ string) (int, int, error) {
 	return f.ahead, f.behind, nil
 }
-func (f *fakeGitRunner) Checkout(_, _ string) error { return nil }
-func (f *fakeGitRunner) PullFFOnly(_ string) error  { return nil }
+func (f *fakeGitRunner) PullFFOnly(_ string) error { return nil }
 func (f *fakeGitRunner) MergedBranches(_, _ string) ([]string, error) {
 	return nil, nil
 }
@@ -51,7 +52,9 @@ func (f *fakeGitRunner) StatusDirty(_ string) (bool, error) {
 	return f.isDirty, nil
 }
 func (f *fakeGitRunner) Clone(_, _, name string) error {
+	f.mu.Lock()
 	f.clonedNames = append(f.clonedNames, name)
+	f.mu.Unlock()
 	return f.cloneErr
 }
 
@@ -105,6 +108,42 @@ func TestRunClonesNewRepo(t *testing.T) {
 	}
 	if len(gitRunner.clonedNames) != 1 || gitRunner.clonedNames[0] != repoName {
 		t.Errorf("clonedNames = %v, want [%s]", gitRunner.clonedNames, repoName)
+	}
+}
+
+func TestRunReportOrphans(t *testing.T) {
+	baseDir := t.TempDir()
+
+	// Create a local dir that won't appear in the API response.
+	orphanDir := filepath.Join(baseDir, "orphan-repo")
+	if err := os.MkdirAll(orphanDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{Name: strPtrS("known-repo"), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/t/known-repo.git"), SSHURL: strPtrS("git@github.com:t/known-repo.git")},
+		},
+	}
+
+	gitRunner := &fakeGitRunner{isGitRepo: false}
+	cfg := config.Config{Dir: baseDir, Limit: 10, ReportOrphans: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var orphaned []RepoResult
+	for _, r := range results {
+		if r.Status == StatusOrphaned {
+			orphaned = append(orphaned, r)
+		}
+	}
+	if len(orphaned) != 1 {
+		t.Fatalf("expected 1 orphaned result, got %d", len(orphaned))
+	}
+	if orphaned[0].Name != "orphan-repo" {
+		t.Errorf("orphaned name = %q, want orphan-repo", orphaned[0].Name)
 	}
 }
 
@@ -171,6 +210,57 @@ func TestRunSyncsExistingRepoOK(t *testing.T) {
 	if results[0].Status != StatusOK {
 		t.Errorf("status = %q, want OK", results[0].Status)
 	}
+}
+
+func TestRunFetchReportsBehindWithoutPulling(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "fetch-behind"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{Name: strPtrS(repoName), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/t/fetch-behind.git")},
+		},
+	}
+
+	pulled := false
+	gitRunner := &fakePullTracker{
+		fakeGitRunner: fakeGitRunner{
+			isGitRepo:     true,
+			defaultBranch: "main",
+			currentBranch: "main",
+			remoteURL:     "https://github.com/t/fetch-behind.git",
+			behind:        2,
+		},
+		onPull: func() { pulled = true },
+	}
+
+	cfg := config.Config{Dir: baseDir, Limit: 10, Fetch: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results[0].Status != StatusBehind {
+		t.Errorf("--fetch: status = %q, want BEHIND", results[0].Status)
+	}
+	if pulled {
+		t.Error("--fetch: PullFFOnly should NOT be called")
+	}
+}
+
+type fakePullTracker struct {
+	fakeGitRunner
+	onPull func()
+}
+
+func (f *fakePullTracker) PullFFOnly(_ string) error {
+	if f.onPull != nil {
+		f.onPull()
+	}
+	return nil
 }
 
 func TestRunExistingRepoOKWithoutPull(t *testing.T) {
@@ -304,6 +394,56 @@ func TestRunHandlesCloneError(t *testing.T) {
 	}
 	if results[0].Err == nil {
 		t.Error("expected non-nil Err for clone failure")
+	}
+}
+
+func boolPtrS(b bool) *bool { return &b }
+
+func TestRunSkipForks(t *testing.T) {
+	baseDir := t.TempDir()
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{Name: strPtrS("original"), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/u/original.git"), SSHURL: strPtrS("git@github.com:u/original.git"), Fork: boolPtrS(false)},
+			{Name: strPtrS("forked"), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/u/forked.git"), SSHURL: strPtrS("git@github.com:u/forked.git"), Fork: boolPtrS(true)},
+		},
+	}
+
+	gitRunner := &fakeGitRunner{isGitRepo: false}
+	cfg := config.Config{Dir: baseDir, Limit: 10, SkipForks: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result after skip-forks, got %d", len(results))
+	}
+	if results[0].Name != "original" {
+		t.Errorf("expected original, got %s", results[0].Name)
+	}
+}
+
+func TestRunSkipArchived(t *testing.T) {
+	baseDir := t.TempDir()
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{Name: strPtrS("active"), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/u/active.git"), SSHURL: strPtrS("git@github.com:u/active.git"), Archived: boolPtrS(false)},
+			{Name: strPtrS("archived"), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/u/archived.git"), SSHURL: strPtrS("git@github.com:u/archived.git"), Archived: boolPtrS(true)},
+		},
+	}
+
+	gitRunner := &fakeGitRunner{isGitRepo: false}
+	cfg := config.Config{Dir: baseDir, Limit: 10, SkipArchived: true}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result after skip-archived, got %d", len(results))
+	}
+	if results[0].Name != "active" {
+		t.Errorf("expected active, got %s", results[0].Name)
 	}
 }
 

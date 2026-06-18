@@ -225,7 +225,7 @@ type pullError struct{}
 
 func (e *pullError) Error() string { return "pull --ff-only failed" }
 
-// TestSyncOneDefaultBranchBehindPullSucceeds verifies BEHIND status on successful pull.
+// TestSyncOneDefaultBranchBehindPullSucceeds verifies PULLED status on successful pull.
 func TestSyncOneDefaultBranchBehindPullSucceeds(t *testing.T) {
 	baseDir := t.TempDir()
 	repoName := "behind-ok-repo"
@@ -253,12 +253,12 @@ func TestSyncOneDefaultBranchBehindPullSucceeds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if results[0].Status != StatusBehind {
-		t.Errorf("status = %q, want BEHIND when pull succeeds", results[0].Status)
+	if results[0].Status != StatusPulled {
+		t.Errorf("status = %q, want PULLED when pull succeeds", results[0].Status)
 	}
 }
 
-// TestSyncOneFeatureClean covers feature branch with no ahead commits and no PR → CLEANED.
+// TestSyncOneFeatureClean covers feature branch with no ahead commits and no PR → SYNCED.
 func TestSyncOneFeatureClean(t *testing.T) {
 	baseDir := t.TempDir()
 	repoName := "clean-feat-repo"
@@ -286,8 +286,8 @@ func TestSyncOneFeatureClean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if results[0].Status != StatusCleaned {
-		t.Errorf("status = %q, want CLEANED", results[0].Status)
+	if results[0].Status != StatusSynced {
+		t.Errorf("status = %q, want SYNCED", results[0].Status)
 	}
 }
 

@@ -219,6 +219,81 @@ func TestTokenFromGHHostsBadYAML(t *testing.T) {
 	}
 }
 
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(orig) })
+}
+
+func TestLoadFileConfigNoFile(t *testing.T) {
+	chdir(t, t.TempDir())
+	t.Setenv("HOME", t.TempDir())
+	fc, err := LoadFileConfig()
+	if err != nil {
+		t.Fatalf("LoadFileConfig with no file: %v", err)
+	}
+	if fc.Dir != nil || fc.Limit != nil || fc.Owner != nil {
+		t.Error("expected all fields nil when no config file exists")
+	}
+}
+
+func TestLoadFileConfigCWD(t *testing.T) {
+	tmp := t.TempDir()
+	chdir(t, tmp)
+	t.Setenv("HOME", t.TempDir()) // no ~/.config/repo-sync/config.yml
+
+	yml := "dir: ~/mycode\nlimit: 50\nskip_forks: true\n"
+	if err := os.WriteFile(filepath.Join(tmp, ".repo-sync.yml"), []byte(yml), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	fc, err := LoadFileConfig()
+	if err != nil {
+		t.Fatalf("LoadFileConfig: %v", err)
+	}
+	if fc.Dir == nil || *fc.Dir != "~/mycode" {
+		t.Errorf("Dir = %v, want ~/mycode", fc.Dir)
+	}
+	if fc.Limit == nil || *fc.Limit != 50 {
+		t.Errorf("Limit = %v, want 50", fc.Limit)
+	}
+	if fc.SkipForks == nil || !*fc.SkipForks {
+		t.Error("SkipForks should be true")
+	}
+}
+
+func TestLoadFileConfigHomeDir(t *testing.T) {
+	tmp := t.TempDir()
+	chdir(t, t.TempDir()) // CWD has no .repo-sync.yml
+	t.Setenv("HOME", tmp)
+
+	cfgDir := filepath.Join(tmp, ".config", "repo-sync")
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	yml := "owner: myorg\nformat: json\n"
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.yml"), []byte(yml), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	fc, err := LoadFileConfig()
+	if err != nil {
+		t.Fatalf("LoadFileConfig: %v", err)
+	}
+	if fc.Owner == nil || *fc.Owner != "myorg" {
+		t.Errorf("Owner = %v, want myorg", fc.Owner)
+	}
+	if fc.Format == nil || *fc.Format != "json" {
+		t.Errorf("Format = %v, want json", fc.Format)
+	}
+}
+
 func TestExpandHomeEdgeCases(t *testing.T) {
 	tests := []struct {
 		in string
