@@ -230,12 +230,11 @@ func syncOne(
 	decided := Decide(in)
 	decided.Name = name
 
-	// Execute CLEANED actions: delete local branch (best-effort, log only).
+	// CLEANED: switch to default branch and pull. Branches are not deleted —
+	// the tool is intentionally non-destructive on the local filesystem.
 	if decided.Status == StatusCleaned {
 		_ = gitRunner.Checkout(dir, defaultBranch)
-		_ = gitRunner.DeleteLocalBranch(dir, currentBranch)
-		// Only delete remote if origin branch still exists (gone branches are
-		// already pruned by FetchPrune).
+		_ = gitRunner.PullFFOnly(dir)
 	}
 
 	return decided

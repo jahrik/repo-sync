@@ -23,6 +23,9 @@ func Decide(in DecisionInput) RepoResult {
 
 	// On a non-default branch.
 	switch {
+	case in.IsDirty:
+		result.Status = StatusDirty
+
 	case len(in.OpenPRs) > 0:
 		pr := in.OpenPRs[0]
 		result.Status = StatusOpenPR

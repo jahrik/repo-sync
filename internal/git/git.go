@@ -22,8 +22,6 @@ type Runner interface {
 	AheadBehind(dir, branch, defaultBranch string) (ahead, behind int, err error)
 	Checkout(dir, branch string) error
 	PullFFOnly(dir string) error
-	DeleteLocalBranch(dir, branch string) error
-	DeleteRemoteBranch(dir, branch string) error
 	MergedBranches(dir, defaultBranch string) ([]string, error)
 	GoneBranches(dir string) ([]string, error)
 	StatusDirty(dir string) (bool, error)
@@ -134,24 +132,6 @@ func (r *runner) PullFFOnly(dir string) error {
 	_, err := run(dir, "pull", "--ff-only")
 	if err != nil {
 		return fmt.Errorf("git pull in %s: %w", dir, err)
-	}
-	return nil
-}
-
-func (r *runner) DeleteLocalBranch(dir, branch string) error {
-	// -D force-deletes regardless of git's own merge check; callers are
-	// responsible for ensuring the branch is safe to delete before calling this.
-	_, err := run(dir, "branch", "-D", branch)
-	if err != nil {
-		return fmt.Errorf("git delete-local-branch in %s: %w", dir, err)
-	}
-	return nil
-}
-
-func (r *runner) DeleteRemoteBranch(dir, branch string) error {
-	_, err := run(dir, "push", "origin", "--delete", branch)
-	if err != nil {
-		return fmt.Errorf("git delete-remote-branch in %s: %w", dir, err)
 	}
 	return nil
 }
