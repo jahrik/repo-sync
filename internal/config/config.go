@@ -18,7 +18,7 @@ type Config struct {
 	Owner         string
 	Fetch         bool   // fetch + prune existing repos, report status (no writes)
 	Pull          bool   // fetch + fast-forward pull existing repos
-	Switch      bool   // switch SYNCED repos to the default branch and pull
+	Switch        bool   // switch SYNCED repos to the default branch and pull
 	SkipForks     bool   // exclude forked repositories
 	SkipArchived  bool   // exclude archived repositories
 	ReportOrphans bool   // report local dirs with no matching GitHub repo
@@ -35,7 +35,7 @@ type FileConfig struct {
 	Owner         *string `yaml:"owner"`
 	Pull          *bool   `yaml:"pull"`
 	Fetch         *bool   `yaml:"fetch"`
-	Switch      *bool   `yaml:"switch"`
+	Switch        *bool   `yaml:"switch"`
 	SkipForks     *bool   `yaml:"skip_forks"`
 	SkipArchived  *bool   `yaml:"skip_archived"`
 	ReportOrphans *bool   `yaml:"report_orphans"`
