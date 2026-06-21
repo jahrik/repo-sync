@@ -479,6 +479,18 @@ func TestSyncOneCheckoutSwitchesAndPulls(t *testing.T) {
 	if result.Status != StatusSynced {
 		t.Errorf("status = %q, want SYNCED", result.Status)
 	}
+	if gitRunner.checkedOutBranch != "main" {
+		t.Errorf("checkedOutBranch = %q, want %q", gitRunner.checkedOutBranch, "main")
+	}
+	if gitRunner.pullFFOnlyCalls == 0 {
+		t.Error("PullFFOnly was not called after checkout")
+	}
+	if result.Branch != "main" {
+		t.Errorf("result.Branch = %q, want %q after checkout", result.Branch, "main")
+	}
+	if result.Ahead != 0 || result.Behind != 0 {
+		t.Errorf("result.Ahead=%d result.Behind=%d, want both 0 after checkout", result.Ahead, result.Behind)
+	}
 }
 
 // TestSyncOneCheckoutSkipsDirty verifies that --checkout does not switch a
@@ -504,5 +516,11 @@ func TestSyncOneCheckoutSkipsDirty(t *testing.T) {
 	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
 	if result.Status != StatusDirty {
 		t.Errorf("status = %q, want DIRTY (checkout must not touch dirty repos)", result.Status)
+	}
+	if gitRunner.checkedOutBranch != "" {
+		t.Errorf("CheckoutBranch was called on dirty repo (branch = %q), want no call", gitRunner.checkedOutBranch)
+	}
+	if gitRunner.pullFFOnlyCalls != 0 {
+		t.Errorf("PullFFOnly was called %d time(s) on dirty repo, want 0", gitRunner.pullFFOnlyCalls)
 	}
 }

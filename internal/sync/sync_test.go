@@ -15,18 +15,20 @@ import (
 
 // fakeGitRunner implements git.Runner for tests.
 type fakeGitRunner struct {
-	mu            sync.Mutex
-	isGitRepo     bool
-	fetchErr      error
-	defaultBranch string
-	currentBranch string
-	remoteURL     string
-	remoteURLErr  error
-	ahead         int
-	behind        int
-	isDirty       bool
-	cloneErr      error
-	clonedNames   []string
+	mu               sync.Mutex
+	isGitRepo        bool
+	fetchErr         error
+	defaultBranch    string
+	currentBranch    string
+	remoteURL        string
+	remoteURLErr     error
+	ahead            int
+	behind           int
+	isDirty          bool
+	cloneErr         error
+	clonedNames      []string
+	checkedOutBranch string
+	pullFFOnlyCalls  int
 }
 
 func (f *fakeGitRunner) IsGitRepo(_ string) bool   { return f.isGitRepo }
@@ -43,8 +45,18 @@ func (f *fakeGitRunner) RemoteURL(_ string) (string, error) {
 func (f *fakeGitRunner) AheadBehind(_, _, _ string) (int, int, error) {
 	return f.ahead, f.behind, nil
 }
-func (f *fakeGitRunner) PullFFOnly(_ string) error    { return nil }
-func (f *fakeGitRunner) CheckoutBranch(_, _ string) error { return nil }
+func (f *fakeGitRunner) PullFFOnly(_ string) error {
+	f.mu.Lock()
+	f.pullFFOnlyCalls++
+	f.mu.Unlock()
+	return nil
+}
+func (f *fakeGitRunner) CheckoutBranch(_, branch string) error {
+	f.mu.Lock()
+	f.checkedOutBranch = branch
+	f.mu.Unlock()
+	return nil
+}
 func (f *fakeGitRunner) MergedBranches(_, _ string) ([]string, error) {
 	return nil, nil
 }

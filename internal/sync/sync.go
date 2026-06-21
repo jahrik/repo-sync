@@ -406,6 +406,10 @@ func syncOne(
 			decided.Err = err
 			return decided
 		}
+		// Update result to reflect the new HEAD state.
+		decided.Branch = defaultBranch
+		decided.Ahead = 0
+		decided.Behind = 0
 	}
 
 	// With --fetch or --pull: report local branches that are merged or gone.
