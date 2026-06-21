@@ -74,6 +74,20 @@ func (f *fakeGitRunner) Clone(_, _, name string) error {
 	return f.cloneErr
 }
 
+func TestFakeGitRunnerCheckoutUpdatesCurrentBranch(t *testing.T) {
+	r := &fakeGitRunner{currentBranch: "feature"}
+	if err := r.CheckoutBranch("", "main"); err != nil {
+		t.Fatalf("CheckoutBranch: %v", err)
+	}
+	branch, err := r.CurrentBranch("")
+	if err != nil {
+		t.Fatalf("CurrentBranch: %v", err)
+	}
+	if branch != "main" {
+		t.Errorf("CurrentBranch = %q, want main", branch)
+	}
+}
+
 // Compile-time interface check.
 var _ git.Runner = (*fakeGitRunner)(nil)
 

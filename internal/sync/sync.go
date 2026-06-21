@@ -407,7 +407,7 @@ func syncOne(
 			}
 			// Reflect switched HEAD immediately so subsequent errors report end state.
 			decided.Branch = defaultBranch
-			if a, b, err := gitRunner.AheadBehind(dir, defaultBranch, defaultBranch); err == nil {
+			if a, b, err := gitRunner.AheadBehind(dir, defaultBranch, decided.Branch); err == nil {
 				decided.Ahead = a
 				decided.Behind = b
 			} else {
