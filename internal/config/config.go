@@ -16,11 +16,11 @@ type Config struct {
 	Token         string
 	UseSSH        bool
 	Owner         string
-	Fetch         bool   // fetch + prune existing repos, report status (no writes)
-	Pull          bool   // fetch + fast-forward pull existing repos
-	Checkout      bool   // switch SYNCED repos to the default branch and pull
-	SkipForks     bool   // exclude forked repositories
-	SkipArchived  bool   // exclude archived repositories
+	Fetch         bool     // fetch + prune existing repos, report status (no writes)
+	Pull          bool     // fetch + fast-forward pull existing repos
+	Checkout      bool     // switch SYNCED repos to the default branch and pull
+	SkipForks     bool     // exclude forked repositories
+	SkipArchived  bool     // exclude archived repositories
 	ReportOrphans bool     // report local dirs with no matching GitHub repo
 	Format        string   // output format: "text" (default) or "json"
 	Filter        string   // regexp to match against repo name (empty = all)
@@ -30,15 +30,15 @@ type Config struct {
 // FileConfig holds values that can be set in a config file.
 // All fields are pointers so we can distinguish "set" from "zero value".
 type FileConfig struct {
-	Dir           *string `yaml:"dir"`
-	Limit         *int    `yaml:"limit"`
-	Token         *string `yaml:"token"`
-	Owner         *string `yaml:"owner"`
-	Pull          *bool   `yaml:"pull"`
-	Fetch         *bool   `yaml:"fetch"`
-	Checkout      *bool   `yaml:"checkout"`
-	SkipForks     *bool   `yaml:"skip_forks"`
-	SkipArchived  *bool   `yaml:"skip_archived"`
+	Dir           *string   `yaml:"dir"`
+	Limit         *int      `yaml:"limit"`
+	Token         *string   `yaml:"token"`
+	Owner         *string   `yaml:"owner"`
+	Pull          *bool     `yaml:"pull"`
+	Fetch         *bool     `yaml:"fetch"`
+	Checkout      *bool     `yaml:"checkout"`
+	SkipForks     *bool     `yaml:"skip_forks"`
+	SkipArchived  *bool     `yaml:"skip_archived"`
 	ReportOrphans *bool     `yaml:"report_orphans"`
 	Format        *string   `yaml:"format"`
 	Filter        *string   `yaml:"filter"`
