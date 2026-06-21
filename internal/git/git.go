@@ -129,9 +129,9 @@ func (r *runner) PullFFOnly(dir string) error {
 }
 
 func (r *runner) CheckoutBranch(dir, branch string) error {
-	_, err := run(dir, "checkout", "--", branch)
+	_, err := run(dir, "switch", "--", branch)
 	if err != nil {
-		return fmt.Errorf("git checkout in %s: %w", dir, err)
+		return fmt.Errorf("git switch in %s: %w", dir, err)
 	}
 	return nil
 }
