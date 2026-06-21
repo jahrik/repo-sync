@@ -394,8 +394,8 @@ func syncOne(
 	decided.Name = name
 	decided.DefaultBranch = defaultBranch
 
-	// With --switch: switch SYNCED repos to the default branch and pull.
-	if cfg.Switch && decided.Status == StatusSynced {
+	// With --checkout: switch SYNCED repos to the default branch and pull.
+	if cfg.Checkout && decided.Status == StatusSynced {
 		// Re-verify dirty state immediately before any working-tree writes.
 		// If the check errors or the tree is dirty, skip checkout rather than risk data loss.
 		dirtyNow, dirtyCheckErr := gitRunner.StatusDirty(dir)

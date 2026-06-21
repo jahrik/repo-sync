@@ -27,7 +27,7 @@ var (
 	flagOwner         string
 	flagFetch         bool
 	flagPull          bool
-	flagSwitch        bool
+	flagCheckout      bool
 	flagSkipForks     bool
 	flagSkipArchived  bool
 	flagReportOrphans bool
@@ -81,7 +81,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagOwner, "owner", "", "GitHub user or org to sync (default: authenticated user)")
 	rootCmd.PersistentFlags().BoolVar(&flagFetch, "fetch", false, "fetch and report status of existing repos (no writes)")
 	rootCmd.PersistentFlags().BoolVar(&flagPull, "pull", false, "fetch and fast-forward pull existing repos (implies --fetch)")
-	rootCmd.PersistentFlags().BoolVar(&flagSwitch, "switch", false, "switch repos on merged branches to the default branch and pull (implies --pull)")
+	rootCmd.PersistentFlags().BoolVar(&flagCheckout, "checkout", false, "switch repos on merged branches to the default branch and pull (implies --pull)")
 	rootCmd.PersistentFlags().BoolVar(&flagSkipForks, "skip-forks", false, "exclude forked repositories")
 	rootCmd.PersistentFlags().BoolVar(&flagSkipArchived, "skip-archived", false, "exclude archived repositories")
 	rootCmd.PersistentFlags().BoolVar(&flagReportOrphans, "report-orphans", false, "report local directories that have no matching GitHub repo")
@@ -122,7 +122,7 @@ func run(cmd *cobra.Command, _ []string) error {
 	applyFileString("owner", fc.Owner)
 	applyFileBool("pull", fc.Pull)
 	applyFileBool("fetch", fc.Fetch)
-	applyFileBool("switch", fc.Switch)
+	applyFileBool("checkout", fc.Checkout)
 	applyFileBool("skip-forks", fc.SkipForks)
 	applyFileBool("skip-archived", fc.SkipArchived)
 	applyFileBool("report-orphans", fc.ReportOrphans)
@@ -133,9 +133,9 @@ func run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
-	cfg.Fetch = flagFetch || flagPull || flagSwitch
-	cfg.Pull = flagPull || flagSwitch
-	cfg.Switch = flagSwitch
+	cfg.Fetch = flagFetch || flagPull || flagCheckout
+	cfg.Pull = flagPull || flagCheckout
+	cfg.Checkout = flagCheckout
 	cfg.SkipForks = flagSkipForks
 	cfg.SkipArchived = flagSkipArchived
 	cfg.ReportOrphans = flagReportOrphans

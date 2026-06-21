@@ -456,11 +456,11 @@ func (f *fakeGitRunnerPanic) IsGitRepo(_ string) bool {
 // Ensure fakeGitRunnerPanic satisfies git.Runner interface.
 var _ git.Runner = (*fakeGitRunnerPanic)(nil)
 
-// TestSyncOneSwitchesAndPulls verifies that --switch switches a
+// TestSyncOneCheckoutSwitchesAndPulls verifies that --checkout switches a
 // SYNCED repo to the default branch and fast-forward pulls it.
-func TestSyncOneSwitchesAndPulls(t *testing.T) {
+func TestSyncOneCheckoutSwitchesAndPulls(t *testing.T) {
 	baseDir := t.TempDir()
-	repoName := "switch-repo"
+	repoName := "checkout-repo"
 	repoDir := filepath.Join(baseDir, repoName)
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
 		t.Fatal(err)
@@ -470,11 +470,11 @@ func TestSyncOneSwitchesAndPulls(t *testing.T) {
 		isGitRepo:     true,
 		defaultBranch: "main",
 		currentBranch: "update-role",
-		remoteURL:     "https://github.com/owner/switch-repo.git",
+		remoteURL:     "https://github.com/owner/checkout-repo.git",
 		ahead:         0,
 	}
 
-	cfg := config.Config{Limit: 10, Pull: true, Switch: true}
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
 	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
 	if result.Status != StatusOK {
 		t.Errorf("status = %q, want OK (repo is on default branch after checkout)", result.Status)
@@ -493,11 +493,11 @@ func TestSyncOneSwitchesAndPulls(t *testing.T) {
 	}
 }
 
-// TestSyncOneSwitchSkipsDirty verifies that --switch does not switch a
+// TestSyncOneCheckoutSkipsDirty verifies that --checkout does not switch a
 // dirty repo (it should remain DIRTY, not attempt a checkout).
-func TestSyncOneSwitchSkipsDirty(t *testing.T) {
+func TestSyncOneCheckoutSkipsDirty(t *testing.T) {
 	baseDir := t.TempDir()
-	repoName := "dirty-switch-repo"
+	repoName := "dirty-checkout-repo"
 	repoDir := filepath.Join(baseDir, repoName)
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
 		t.Fatal(err)
@@ -507,12 +507,12 @@ func TestSyncOneSwitchSkipsDirty(t *testing.T) {
 		isGitRepo:     true,
 		defaultBranch: "main",
 		currentBranch: "update-role",
-		remoteURL:     "https://github.com/owner/dirty-switch-repo.git",
+		remoteURL:     "https://github.com/owner/dirty-checkout-repo.git",
 		ahead:         0,
 		isDirty:       true,
 	}
 
-	cfg := config.Config{Limit: 10, Pull: true, Switch: true}
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
 	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
 	if result.Status != StatusDirty {
 		t.Errorf("status = %q, want DIRTY (checkout must not touch dirty repos)", result.Status)
@@ -525,11 +525,11 @@ func TestSyncOneSwitchSkipsDirty(t *testing.T) {
 	}
 }
 
-// TestSyncOneSwitchSkipsDirtyCheckError verifies that --switch skips
+// TestSyncOneCheckoutSkipsDirtyCheckError verifies that --checkout skips
 // checkout when StatusDirty returns an error (unknown state = safe to skip).
-func TestSyncOneSwitchSkipsDirtyCheckError(t *testing.T) {
+func TestSyncOneCheckoutSkipsDirtyCheckError(t *testing.T) {
 	baseDir := t.TempDir()
-	repoName := "dirty-err-switch-repo"
+	repoName := "dirty-err-checkout-repo"
 	repoDir := filepath.Join(baseDir, repoName)
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
 		t.Fatal(err)
@@ -540,12 +540,12 @@ func TestSyncOneSwitchSkipsDirtyCheckError(t *testing.T) {
 			isGitRepo:     true,
 			defaultBranch: "main",
 			currentBranch: "update-role",
-			remoteURL:     "https://github.com/owner/dirty-err-switch-repo.git",
+			remoteURL:     "https://github.com/owner/dirty-err-checkout-repo.git",
 			ahead:         0,
 		},
 	}
 
-	cfg := config.Config{Limit: 10, Pull: true, Switch: true}
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
 	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
 	// StatusDirty errors → checkout skipped → stays SYNCED.
 	if result.Status != StatusSynced {
