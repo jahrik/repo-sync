@@ -2,8 +2,7 @@
 
 Syncs all your GitHub repositories to a local directory. By default it clones
 any repos you don't have locally. With `--fetch`, `--pull`, or `--checkout` it
-also inspects existing repos and reports their status. Everything is read-only
-unless you explicitly ask for writes.
+also inspects existing repos and reports their status.
 
 ## Install
 
