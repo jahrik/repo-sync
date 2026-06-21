@@ -29,6 +29,8 @@ type fakeGitRunner struct {
 	clonedNames      []string
 	checkedOutBranch string
 	pullFFOnlyCalls  int
+	pullFFOnlyErr    error
+	checkoutErr      error
 }
 
 func (f *fakeGitRunner) IsGitRepo(_ string) bool   { return f.isGitRepo }
@@ -49,13 +51,14 @@ func (f *fakeGitRunner) PullFFOnly(_ string) error {
 	f.mu.Lock()
 	f.pullFFOnlyCalls++
 	f.mu.Unlock()
-	return nil
+	return f.pullFFOnlyErr
 }
 func (f *fakeGitRunner) CheckoutBranch(_, branch string) error {
 	f.mu.Lock()
 	f.checkedOutBranch = branch
+	f.currentBranch = branch
 	f.mu.Unlock()
-	return nil
+	return f.checkoutErr
 }
 func (f *fakeGitRunner) MergedBranches(_, _ string) ([]string, error) {
 	return nil, nil

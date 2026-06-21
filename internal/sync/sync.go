@@ -405,6 +405,15 @@ func syncOne(
 				decided.Err = err
 				return decided
 			}
+			// Reflect switched HEAD immediately so subsequent errors report end state.
+			decided.Branch = defaultBranch
+			if a, b, err := gitRunner.AheadBehind(dir, defaultBranch, defaultBranch); err == nil {
+				decided.Ahead = a
+				decided.Behind = b
+			} else {
+				decided.Ahead = 0
+				decided.Behind = 0
+			}
 			if err := gitRunner.PullFFOnly(dir); err != nil {
 				decided.Status = StatusError
 				decided.Err = err
