@@ -15,18 +15,22 @@ import (
 
 // fakeGitRunner implements git.Runner for tests.
 type fakeGitRunner struct {
-	mu            sync.Mutex
-	isGitRepo     bool
-	fetchErr      error
-	defaultBranch string
-	currentBranch string
-	remoteURL     string
-	remoteURLErr  error
-	ahead         int
-	behind        int
-	isDirty       bool
-	cloneErr      error
-	clonedNames   []string
+	mu               sync.Mutex
+	isGitRepo        bool
+	fetchErr         error
+	defaultBranch    string
+	currentBranch    string
+	remoteURL        string
+	remoteURLErr     error
+	ahead            int
+	behind           int
+	isDirty          bool
+	cloneErr         error
+	clonedNames      []string
+	checkedOutBranch string
+	pullFFOnlyCalls  int
+	pullFFOnlyErr    error
+	checkoutErr      error
 }
 
 func (f *fakeGitRunner) IsGitRepo(_ string) bool   { return f.isGitRepo }
@@ -43,7 +47,19 @@ func (f *fakeGitRunner) RemoteURL(_ string) (string, error) {
 func (f *fakeGitRunner) AheadBehind(_, _, _ string) (int, int, error) {
 	return f.ahead, f.behind, nil
 }
-func (f *fakeGitRunner) PullFFOnly(_ string) error { return nil }
+func (f *fakeGitRunner) PullFFOnly(_ string) error {
+	f.mu.Lock()
+	f.pullFFOnlyCalls++
+	f.mu.Unlock()
+	return f.pullFFOnlyErr
+}
+func (f *fakeGitRunner) CheckoutBranch(_, branch string) error {
+	f.mu.Lock()
+	f.checkedOutBranch = branch
+	f.currentBranch = branch
+	f.mu.Unlock()
+	return f.checkoutErr
+}
 func (f *fakeGitRunner) MergedBranches(_, _ string) ([]string, error) {
 	return nil, nil
 }
@@ -56,6 +72,20 @@ func (f *fakeGitRunner) Clone(_, _, name string) error {
 	f.clonedNames = append(f.clonedNames, name)
 	f.mu.Unlock()
 	return f.cloneErr
+}
+
+func TestFakeGitRunnerCheckoutUpdatesCurrentBranch(t *testing.T) {
+	r := &fakeGitRunner{currentBranch: "feature"}
+	if err := r.CheckoutBranch("", "main"); err != nil {
+		t.Fatalf("CheckoutBranch: %v", err)
+	}
+	branch, err := r.CurrentBranch("")
+	if err != nil {
+		t.Fatalf("CurrentBranch: %v", err)
+	}
+	if branch != "main" {
+		t.Errorf("CurrentBranch = %q, want main", branch)
+	}
 }
 
 // Compile-time interface check.

@@ -394,6 +394,34 @@ func syncOne(
 	decided.Name = name
 	decided.DefaultBranch = defaultBranch
 
+	// With --checkout: switch SYNCED repos to the default branch and pull.
+	if cfg.Checkout && decided.Status == StatusSynced {
+		// Re-verify dirty state immediately before any working-tree writes.
+		// If the check errors or the tree is dirty, skip checkout rather than risk data loss.
+		dirtyNow, dirtyCheckErr := gitRunner.StatusDirty(dir)
+		if dirtyCheckErr == nil && !dirtyNow {
+			if err := gitRunner.CheckoutBranch(dir, defaultBranch); err != nil {
+				decided.Status = StatusError
+				decided.Err = err
+				return decided
+			}
+			// Reflect switched HEAD immediately so subsequent errors report end state.
+			decided.Branch = defaultBranch
+			decided.Ahead = 0
+			decided.Behind = 0
+			if err := gitRunner.PullFFOnly(dir); err != nil {
+				decided.Status = StatusError
+				decided.Err = err
+				return decided
+			}
+			// Update result to reflect the new HEAD state.
+			decided.Branch = defaultBranch
+			decided.Ahead = 0
+			decided.Behind = 0
+			decided.Status = StatusOK
+		}
+	}
+
 	// With --fetch or --pull: report local branches that are merged or gone.
 	if cfg.Fetch || cfg.Pull {
 		decided.StaleBranches = staleBranches(gitRunner, dir, defaultBranch)

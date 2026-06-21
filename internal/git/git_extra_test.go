@@ -308,3 +308,35 @@ func TestStatusDirtyError(t *testing.T) {
 		t.Error("expected error from StatusDirty on non-git dir")
 	}
 }
+
+func TestCheckoutBranch(t *testing.T) {
+	r := NewRunner()
+	dir := initRepo(t)
+
+	// Create a second branch to switch to.
+	cmd := exec.Command("git", "branch", "other")
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git branch other: %v: %s", err, out)
+	}
+
+	if err := r.CheckoutBranch(dir, "other"); err != nil {
+		t.Fatalf("CheckoutBranch: %v", err)
+	}
+
+	branch, err := r.CurrentBranch(dir)
+	if err != nil {
+		t.Fatalf("CurrentBranch after checkout: %v", err)
+	}
+	if branch != "other" {
+		t.Errorf("branch = %q, want other after checkout", branch)
+	}
+}
+
+func TestCheckoutBranchError(t *testing.T) {
+	r := NewRunner()
+	dir := initRepo(t)
+	if err := r.CheckoutBranch(dir, "no-such-branch"); err == nil {
+		t.Error("expected error checking out non-existent branch")
+	}
+}

@@ -455,3 +455,181 @@ func (f *fakeGitRunnerPanic) IsGitRepo(_ string) bool {
 
 // Ensure fakeGitRunnerPanic satisfies git.Runner interface.
 var _ git.Runner = (*fakeGitRunnerPanic)(nil)
+
+// TestSyncOneCheckoutSwitchesAndPulls verifies that --checkout switches a
+// SYNCED repo to the default branch and fast-forward pulls it.
+func TestSyncOneCheckoutSwitchesAndPulls(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "checkout-repo"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gitRunner := &fakeGitRunner{
+		isGitRepo:     true,
+		defaultBranch: "main",
+		currentBranch: "update-role",
+		remoteURL:     "https://github.com/owner/checkout-repo.git",
+		ahead:         0,
+	}
+
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
+	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
+	if result.Status != StatusOK {
+		t.Errorf("status = %q, want OK (repo is on default branch after checkout)", result.Status)
+	}
+	if gitRunner.checkedOutBranch != "main" {
+		t.Errorf("checkedOutBranch = %q, want %q", gitRunner.checkedOutBranch, "main")
+	}
+	if gitRunner.pullFFOnlyCalls == 0 {
+		t.Error("PullFFOnly was not called after checkout")
+	}
+	if result.Branch != "main" {
+		t.Errorf("result.Branch = %q, want %q after checkout", result.Branch, "main")
+	}
+	if result.Ahead != 0 || result.Behind != 0 {
+		t.Errorf("result.Ahead=%d result.Behind=%d, want both 0 after checkout", result.Ahead, result.Behind)
+	}
+}
+
+// TestSyncOneCheckoutSkipsDirty verifies that --checkout does not switch a
+// dirty repo (it should remain DIRTY, not attempt a checkout).
+func TestSyncOneCheckoutSkipsDirty(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "dirty-checkout-repo"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gitRunner := &fakeGitRunner{
+		isGitRepo:     true,
+		defaultBranch: "main",
+		currentBranch: "update-role",
+		remoteURL:     "https://github.com/owner/dirty-checkout-repo.git",
+		ahead:         0,
+		isDirty:       true,
+	}
+
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
+	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
+	if result.Status != StatusDirty {
+		t.Errorf("status = %q, want DIRTY (checkout must not touch dirty repos)", result.Status)
+	}
+	if gitRunner.checkedOutBranch != "" {
+		t.Errorf("CheckoutBranch was called on dirty repo (branch = %q), want no call", gitRunner.checkedOutBranch)
+	}
+	if gitRunner.pullFFOnlyCalls != 0 {
+		t.Errorf("PullFFOnly was called %d time(s) on dirty repo, want 0", gitRunner.pullFFOnlyCalls)
+	}
+}
+
+// TestSyncOneCheckoutSkipsDirtyCheckError verifies that --checkout skips
+// checkout when StatusDirty returns an error (unknown state = safe to skip).
+func TestSyncOneCheckoutSkipsDirtyCheckError(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "dirty-err-checkout-repo"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gitRunner := &fakeGitRunnerDirtyErr{
+		fakeGitRunner: fakeGitRunner{
+			isGitRepo:     true,
+			defaultBranch: "main",
+			currentBranch: "update-role",
+			remoteURL:     "https://github.com/owner/dirty-err-checkout-repo.git",
+			ahead:         0,
+		},
+	}
+
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
+	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
+	// StatusDirty errors → checkout skipped → stays SYNCED.
+	if result.Status != StatusSynced {
+		t.Errorf("status = %q, want SYNCED when dirty check errors", result.Status)
+	}
+	if gitRunner.checkedOutBranch != "" {
+		t.Errorf("CheckoutBranch was called despite dirty check error (branch = %q)", gitRunner.checkedOutBranch)
+	}
+}
+
+// TestSyncOneCheckoutPullFailureReflectsSwitchedBranch verifies that when
+// checkout succeeds but pull fails, the result still reflects the new branch.
+func TestSyncOneCheckoutPullFailureReflectsSwitchedBranch(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "checkout-pull-fail-repo"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gitRunner := &fakeGitRunner{
+		isGitRepo:     true,
+		defaultBranch: "main",
+		currentBranch: "update-role",
+		remoteURL:     "https://github.com/owner/checkout-pull-fail-repo.git",
+		ahead:         0,
+		pullFFOnlyErr: errors.New("simulated pull failure"),
+	}
+
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
+	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
+	if result.Status != StatusError {
+		t.Errorf("status = %q, want ERROR when pull fails after checkout", result.Status)
+	}
+	if result.Branch != "main" {
+		t.Errorf("result.Branch = %q, want %q after successful checkout", result.Branch, "main")
+	}
+	if gitRunner.checkedOutBranch != "main" {
+		t.Errorf("checkedOutBranch = %q, want %q", gitRunner.checkedOutBranch, "main")
+	}
+	if result.Err == nil {
+		t.Error("expected pull error in result.Err")
+	}
+}
+
+// TestSyncOneCheckoutFailureReturnsError verifies checkout failures surface as
+// ERROR and no pull is attempted.
+func TestSyncOneCheckoutFailureReturnsError(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "checkout-fail-repo"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gitRunner := &fakeGitRunner{
+		isGitRepo:     true,
+		defaultBranch: "main",
+		currentBranch: "update-role",
+		remoteURL:     "https://github.com/owner/checkout-fail-repo.git",
+		ahead:         0,
+		checkoutErr:   errors.New("simulated checkout failure"),
+	}
+
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
+	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
+	if result.Status != StatusError {
+		t.Errorf("status = %q, want ERROR when checkout fails", result.Status)
+	}
+	if result.Branch != "update-role" {
+		t.Errorf("result.Branch = %q, want %q when checkout fails", result.Branch, "update-role")
+	}
+	if gitRunner.pullFFOnlyCalls != 0 {
+		t.Errorf("PullFFOnly was called %d time(s), want 0 when checkout fails", gitRunner.pullFFOnlyCalls)
+	}
+	if result.Err == nil {
+		t.Error("expected checkout error in result.Err")
+	}
+}
+
+type fakeGitRunnerDirtyErr struct {
+	fakeGitRunner
+}
+
+func (f *fakeGitRunnerDirtyErr) StatusDirty(_ string) (bool, error) {
+	return false, errors.New("simulated StatusDirty error")
+}
