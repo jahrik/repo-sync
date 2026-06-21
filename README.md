@@ -1,9 +1,9 @@
 # repo-sync
 
 Syncs all your GitHub repositories to a local directory. By default it clones
-any repos you don't have locally. With `--fetch` or `--pull` it also inspects
-existing repos and reports their status. Everything is read-only unless you
-explicitly ask for writes.
+any repos you don't have locally. With `--fetch`, `--pull`, or `--checkout` it
+also inspects existing repos and reports their status. Everything is read-only
+unless you explicitly ask for writes.
 
 ## Install
 
@@ -33,6 +33,7 @@ Flags:
       --dir string       directory containing your local clones (default "~/github")
       --fetch            fetch existing repos and report status (no writes)
       --pull             fetch and fast-forward pull existing repos (implies --fetch)
+      --checkout         switch SYNCED repos to the default branch and pull (implies --pull)
       --skip-forks       exclude forked repositories
       --skip-archived    exclude archived repositories
       --report-orphans   report local directories with no matching GitHub repo
@@ -46,8 +47,6 @@ Flags:
 ```
 
 ## Modes
-
-repo-sync has three operating modes, selected by flags:
 
 ### Default — clone only
 
@@ -86,13 +85,28 @@ rebase. A diverged repo is reported as `DIRTY` so you can resolve it manually.
 
 `--pull` implies `--fetch`.
 
-## How fetch and pull relate to git
+### `--checkout` — clean up SYNCED repos
+
+```bash
+repo-sync --checkout
+```
+
+Everything `--pull` does, plus automatically switches `SYNCED` repos back to
+their default branch and pulls. A repo is `SYNCED` when it is on a feature
+branch with no commits ahead of the default branch and no open PR — meaning the
+branch work is already merged and the checkout is safe.
+
+`--checkout` implies `--pull` (and therefore `--fetch`). If the working tree is
+dirty the checkout is skipped rather than risking data loss.
+
+## How modes relate to git
 
 | repo-sync flag | Equivalent git behaviour |
 |----------------|--------------------------|
 | *(none)*       | `git clone` for missing repos only |
 | `--fetch`      | `git fetch --prune` — updates remote refs, no working-tree changes |
 | `--pull`       | `git fetch --prune` + `git pull --ff-only` on the default branch |
+| `--checkout`   | `--pull` + `git checkout <default>` on SYNCED repos |
 
 Key differences from plain `git pull`:
 
@@ -165,6 +179,7 @@ skip_forks: true
 skip_archived: true
 # fetch: true
 # pull: true
+# checkout: true
 # owner: myorg
 # format: text
 # report_orphans: false
@@ -238,12 +253,13 @@ Warnings:
    missing repos concurrently (worker pool, up to `NumCPU×4` workers).
 4. If `--report-orphans` is set, scans the local directory for directories not
    in the API list and marks them `ORPHANED`.
-5. **Phase 2 — sync** (only with `--fetch` or `--pull`): processes existing
-   repos concurrently via a worker pool. Each worker:
+5. **Phase 2 — sync** (only with `--fetch`, `--pull`, or `--checkout`): processes
+   existing repos concurrently via a worker pool. Each worker:
    - Runs `git fetch --prune`
    - Checks current branch, ahead/behind count, dirty state
    - Queries the GitHub API for open and merged PRs (only on non-default branches)
    - With `--pull`: runs `git pull --ff-only` if the default branch is behind
+   - With `--checkout`: also switches SYNCED repos to the default branch and pulls
    - Reports stale local branches (merged or tracking-gone) informally
 6. Prints a sorted, annotated report to stdout (or JSON with `--format json`).
    Progress and human-friendly notifications go to stderr.

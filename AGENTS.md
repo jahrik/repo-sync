@@ -39,8 +39,9 @@ Three modes, selected by flags:
 | Clone-only | *(none)* | Clones missing repos; marks existing as OK without touching them |
 | Fetch | `--fetch` | Fetches existing repos, reports full status; **no working-tree writes** |
 | Pull | `--pull` | Fetch + `git pull --ff-only` on default branch if behind (implies `--fetch`) |
+| Checkout | `--checkout` | Pull + `git checkout <default>` on SYNCED repos (implies `--pull`) |
 
-`cfg.Fetch = flagFetch || flagPull` — pull always implies fetch. Phase 2 (existing repos) is skipped entirely unless `cfg.Fetch || cfg.Pull`.
+`cfg.Fetch = flagFetch || flagPull || flagCheckout` and `cfg.Pull = flagPull || flagCheckout` — checkout implies pull implies fetch. Phase 2 (existing repos) is skipped entirely unless `cfg.Fetch || cfg.Pull`.
 
 ### Key design decisions
 
