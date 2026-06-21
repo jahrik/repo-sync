@@ -591,6 +591,41 @@ func TestSyncOneCheckoutPullFailureReflectsSwitchedBranch(t *testing.T) {
 	}
 }
 
+// TestSyncOneCheckoutFailureReturnsError verifies checkout failures surface as
+// ERROR and no pull is attempted.
+func TestSyncOneCheckoutFailureReturnsError(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "checkout-fail-repo"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gitRunner := &fakeGitRunner{
+		isGitRepo:     true,
+		defaultBranch: "main",
+		currentBranch: "update-role",
+		remoteURL:     "https://github.com/owner/checkout-fail-repo.git",
+		ahead:         0,
+		checkoutErr:   errors.New("simulated checkout failure"),
+	}
+
+	cfg := config.Config{Limit: 10, Pull: true, Checkout: true}
+	result := syncOne(context.Background(), cfg, nil, gitRunner, repoDir, nil)
+	if result.Status != StatusError {
+		t.Errorf("status = %q, want ERROR when checkout fails", result.Status)
+	}
+	if result.Branch != "update-role" {
+		t.Errorf("result.Branch = %q, want %q when checkout fails", result.Branch, "update-role")
+	}
+	if gitRunner.pullFFOnlyCalls != 0 {
+		t.Errorf("PullFFOnly was called %d time(s), want 0 when checkout fails", gitRunner.pullFFOnlyCalls)
+	}
+	if result.Err == nil {
+		t.Error("expected checkout error in result.Err")
+	}
+}
+
 type fakeGitRunnerDirtyErr struct {
 	fakeGitRunner
 }
