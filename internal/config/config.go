@@ -21,9 +21,10 @@ type Config struct {
 	Checkout      bool   // switch SYNCED repos to the default branch and pull
 	SkipForks     bool   // exclude forked repositories
 	SkipArchived  bool   // exclude archived repositories
-	ReportOrphans bool   // report local dirs with no matching GitHub repo
-	Format        string // output format: "text" (default) or "json"
-	Filter        string // regexp to match against repo name (empty = all)
+	ReportOrphans bool     // report local dirs with no matching GitHub repo
+	Format        string   // output format: "text" (default) or "json"
+	Filter        string   // regexp to match against repo name (empty = all)
+	Ignore        []string // local directory names to exclude from orphan reports
 }
 
 // FileConfig holds values that can be set in a config file.
@@ -38,9 +39,10 @@ type FileConfig struct {
 	Checkout      *bool   `yaml:"checkout"`
 	SkipForks     *bool   `yaml:"skip_forks"`
 	SkipArchived  *bool   `yaml:"skip_archived"`
-	ReportOrphans *bool   `yaml:"report_orphans"`
-	Format        *string `yaml:"format"`
-	Filter        *string `yaml:"filter"`
+	ReportOrphans *bool     `yaml:"report_orphans"`
+	Format        *string   `yaml:"format"`
+	Filter        *string   `yaml:"filter"`
+	Ignore        *[]string `yaml:"ignore"`
 }
 
 // LoadFileConfig reads the first config file found: .repo-sync.yml in the

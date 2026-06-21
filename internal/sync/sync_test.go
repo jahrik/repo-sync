@@ -177,6 +177,42 @@ func TestRunReportOrphans(t *testing.T) {
 	}
 }
 
+func TestRunIgnoreListSuppressesOrphans(t *testing.T) {
+	baseDir := t.TempDir()
+
+	for _, name := range []string{"orphan-repo", ".claude", "scripts"} {
+		if err := os.MkdirAll(filepath.Join(baseDir, name), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{Name: strPtrS("known-repo"), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/t/known-repo.git"), SSHURL: strPtrS("git@github.com:t/known-repo.git")},
+		},
+	}
+
+	gitRunner := &fakeGitRunner{isGitRepo: false}
+	cfg := config.Config{Dir: baseDir, Limit: 10, ReportOrphans: true, Ignore: []string{".claude", "scripts"}}
+	results, err := Run(context.Background(), cfg, gh, gitRunner, baseDir, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var orphaned []RepoResult
+	for _, r := range results {
+		if r.Status == StatusOrphaned {
+			orphaned = append(orphaned, r)
+		}
+	}
+	if len(orphaned) != 1 {
+		t.Fatalf("expected 1 orphaned result, got %d: %v", len(orphaned), orphaned)
+	}
+	if orphaned[0].Name != "orphan-repo" {
+		t.Errorf("orphaned name = %q, want orphan-repo", orphaned[0].Name)
+	}
+}
+
 func TestRunClonesNewRepoSSH(t *testing.T) {
 	baseDir := t.TempDir()
 	repoName := "new-repo-ssh"

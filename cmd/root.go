@@ -33,6 +33,7 @@ var (
 	flagReportOrphans bool
 	flagFormat        string
 	flagFilter        string
+	flagIgnore        []string
 )
 
 var rootCmd = &cobra.Command{
@@ -87,6 +88,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagReportOrphans, "report-orphans", false, "report local directories that have no matching GitHub repo")
 	rootCmd.PersistentFlags().StringVar(&flagFormat, "format", "text", "output format: text or json")
 	rootCmd.PersistentFlags().StringVar(&flagFilter, "filter", "", "regexp to filter repos by name (empty = all)")
+	rootCmd.PersistentFlags().StringArrayVar(&flagIgnore, "ignore", nil, "local directory name to exclude from orphan reports (repeatable)")
 }
 
 func run(cmd *cobra.Command, _ []string) error {
@@ -128,6 +130,9 @@ func run(cmd *cobra.Command, _ []string) error {
 	applyFileBool("report-orphans", fc.ReportOrphans)
 	applyFileString("format", fc.Format)
 	applyFileString("filter", fc.Filter)
+	if fc.Ignore != nil && !flags.Changed("ignore") {
+		flagIgnore = *fc.Ignore
+	}
 
 	cfg, err := config.Resolve(flagDir, flagLimit, flagToken)
 	if err != nil {
@@ -141,6 +146,7 @@ func run(cmd *cobra.Command, _ []string) error {
 	cfg.ReportOrphans = flagReportOrphans
 	cfg.Format = flagFormat
 	cfg.Filter = flagFilter
+	cfg.Ignore = flagIgnore
 
 	gh, err := githubclient.NewClient(cfg.Token)
 	if err != nil {

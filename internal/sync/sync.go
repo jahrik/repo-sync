@@ -202,6 +202,10 @@ func Run(
 		for _, r := range repos {
 			knownNames[r.GetName()] = struct{}{}
 		}
+		ignoreSet := make(map[string]struct{}, len(cfg.Ignore))
+		for _, name := range cfg.Ignore {
+			ignoreSet[name] = struct{}{}
+		}
 		entries, readErr := os.ReadDir(baseDir)
 		if readErr == nil {
 			for _, e := range entries {
@@ -210,6 +214,9 @@ func Run(
 				}
 				name := e.Name()
 				if _, known := knownNames[name]; known {
+					continue
+				}
+				if _, ignored := ignoreSet[name]; ignored {
 					continue
 				}
 				res := RepoResult{Name: name, Status: StatusOrphaned}
