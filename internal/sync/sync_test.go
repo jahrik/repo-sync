@@ -43,7 +43,8 @@ func (f *fakeGitRunner) RemoteURL(_ string) (string, error) {
 func (f *fakeGitRunner) AheadBehind(_, _, _ string) (int, int, error) {
 	return f.ahead, f.behind, nil
 }
-func (f *fakeGitRunner) PullFFOnly(_ string) error { return nil }
+func (f *fakeGitRunner) PullFFOnly(_ string) error    { return nil }
+func (f *fakeGitRunner) CheckoutBranch(_, _ string) error { return nil }
 func (f *fakeGitRunner) MergedBranches(_, _ string) ([]string, error) {
 	return nil, nil
 }

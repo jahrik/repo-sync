@@ -394,6 +394,20 @@ func syncOne(
 	decided.Name = name
 	decided.DefaultBranch = defaultBranch
 
+	// With --checkout: switch SYNCED repos to the default branch and pull.
+	if cfg.Checkout && decided.Status == StatusSynced && !isDirty {
+		if err := gitRunner.CheckoutBranch(dir, defaultBranch); err != nil {
+			decided.Status = StatusError
+			decided.Err = err
+			return decided
+		}
+		if err := gitRunner.PullFFOnly(dir); err != nil {
+			decided.Status = StatusError
+			decided.Err = err
+			return decided
+		}
+	}
+
 	// With --fetch or --pull: report local branches that are merged or gone.
 	if cfg.Fetch || cfg.Pull {
 		decided.StaleBranches = staleBranches(gitRunner, dir, defaultBranch)
