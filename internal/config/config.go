@@ -80,7 +80,7 @@ type hostsEntry struct {
 }
 
 // Resolve builds a Config from flag values, environment variables, and the gh
-// CLI hosts.yml file.  Priority for token: flag → GITHUB_TOKEN env → hosts.yml.
+// CLI.  Priority for token: flag/config-file → GITHUB_TOKEN env → hosts.yml → gh auth token.
 func Resolve(dir string, limit int, token string) (Config, error) {
 	cfg := Config{Limit: limit}
 
