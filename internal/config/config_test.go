@@ -84,13 +84,34 @@ func TestResolveTokenFromHostsYML(t *testing.T) {
 func TestResolveNoToken(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "")
 	t.Setenv("HOME", t.TempDir()) // no hosts.yml there
+	t.Setenv("PATH", t.TempDir()) // gh not on PATH
 	cfg, err := Resolve("/tmp", 5, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Should succeed with empty token (unauthenticated mode).
 	if cfg.Token != "" {
 		t.Errorf("expected empty token, got %q", cfg.Token)
+	}
+}
+
+func TestResolveTokenFromGHCLI(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("HOME", tmp) // no hosts.yml
+
+	// Create a fake "gh" script that prints a token.
+	script := filepath.Join(tmp, "gh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho gh-cli-token\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", tmp)
+
+	cfg, err := Resolve("/tmp", 10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Token != "gh-cli-token" {
+		t.Errorf("token = %q, want gh-cli-token", cfg.Token)
 	}
 }
 

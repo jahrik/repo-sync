@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -68,32 +69,15 @@ func TestNewClientSuccess(t *testing.T) {
 	}
 }
 
-// TestNewClientNoToken exercises the unauthenticated (token=="") code path in
-// NewClient.
+// TestNewClientNoToken verifies that NewClient returns ErrNoToken when called
+// with an empty token.
 func TestNewClientNoToken(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/user":
-			writeJSON(w, map[string]string{"login": "anonuser"})
-		default:
-			writeJSON(w, map[string]interface{}{})
-		}
-	}))
-	defer srv.Close()
-
-	u, _ := url.Parse(srv.URL)
-	restore := withDefaultTransport(&stubTransport{
-		targetHost: u.Host,
-		inner:      http.DefaultTransport,
-	})
-	defer restore()
-
-	c, err := NewClient("")
-	if err != nil {
-		t.Fatalf("NewClient (no token): %v", err)
+	_, err := NewClient("")
+	if err == nil {
+		t.Fatal("expected error from NewClient with empty token")
 	}
-	if c == nil {
-		t.Fatal("NewClient returned nil client")
+	if !errors.Is(err, ErrNoToken) {
+		t.Errorf("expected ErrNoToken, got: %v", err)
 	}
 }
 

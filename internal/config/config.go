@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -79,7 +80,7 @@ type hostsEntry struct {
 }
 
 // Resolve builds a Config from flag values, environment variables, and the gh
-// CLI hosts.yml file.  Priority for token: flag → GITHUB_TOKEN env → hosts.yml.
+// CLI.  Priority for token: flag/config-file → GITHUB_TOKEN env → hosts.yml → gh auth token.
 func Resolve(dir string, limit int, token string) (Config, error) {
 	cfg := Config{Limit: limit}
 
@@ -97,16 +98,34 @@ func Resolve(dir string, limit int, token string) (Config, error) {
 		cfg.Token = t
 	} else {
 		t, useSSH, err := tokenFromGHHosts()
-		if err != nil {
-			// Non-fatal; we'll attempt unauthenticated calls (rate-limited).
-			_ = err
-		} else {
+		if err == nil && t != "" {
 			cfg.Token = t
 			cfg.UseSSH = useSSH
+		} else {
+			if err == nil {
+				cfg.UseSSH = useSSH
+			}
+			if t, err := tokenFromGHCLI(); err == nil {
+				cfg.Token = t
+			}
 		}
 	}
 
 	return cfg, nil
+}
+
+// tokenFromGHCLI runs "gh auth token" to retrieve the token from whatever
+// storage backend gh uses (keychain, encrypted file, etc.).
+func tokenFromGHCLI() (string, error) {
+	out, err := exec.Command("gh", "auth", "token").Output()
+	if err != nil {
+		return "", err
+	}
+	t := strings.TrimSpace(string(out))
+	if t == "" {
+		return "", fmt.Errorf("config: gh auth token returned empty")
+	}
+	return t, nil
 }
 
 // tokenFromGHHosts reads ~/.config/gh/hosts.yml and returns the token and
