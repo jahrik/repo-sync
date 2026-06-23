@@ -62,7 +62,7 @@ Three modes, selected by flags:
 
 ### Config layering (highest priority first)
 
-CLI flag → `.repo-sync.yml` (CWD) or `~/.config/repo-sync/config.yml` → `GITHUB_TOKEN` env → `~/.config/gh/hosts.yml`
+CLI flag → `.repo-sync.yml` (CWD) or `~/.config/repo-sync/config.yml` → `GITHUB_TOKEN` env → `~/.config/gh/hosts.yml` → `gh auth token` (keychain/encrypted storage)
 
 `FileConfig` uses pointer fields so unset YAML keys don't override flag defaults. `cmd.Flags().Changed(name)` detects whether the user explicitly set a flag before applying file values.
 
@@ -85,7 +85,7 @@ CLI flag → `.repo-sync.yml` (CWD) or `~/.config/repo-sync/config.yml` → `GIT
 
 ## Non-obvious gotchas
 
-- `config.Resolve` reads `~/.config/gh/hosts.yml` to auto-detect the token and SSH preference from the `gh` CLI. Falls back to unauthenticated API calls (60 req/hr) if absent.
+- `config.Resolve` reads `~/.config/gh/hosts.yml` for the token and SSH preference, falling back to `gh auth token` for keychain-based storage. A valid token is required; `NewClient` returns `ErrNoToken` with setup instructions if none is found.
 - `--owner` defaults to the authenticated user's login (from `GET /user` in `NewClient`). Owner filtering runs in `sync.Run` after `ListRepos` — non-matching repos are dropped before any I/O.
 - Repos whose `origin` remote does not contain `github.com` are silently skipped and reported as `OK`.
 - `ListMergedPRs` filters the "closed" state API response by checking `MergedAt != zero` — a closed-but-not-merged PR does not trigger `SYNCED`.

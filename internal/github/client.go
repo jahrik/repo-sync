@@ -22,24 +22,37 @@ type client struct {
 	owner string
 }
 
-// NewClient creates an authenticated (or unauthenticated if token=="") GitHub
-// client and resolves the authenticated user's login as the owner.
+// ErrNoToken is returned when NewClient is called with an empty token.
+var ErrNoToken = &noTokenError{}
+
+type noTokenError struct{}
+
+func (e *noTokenError) Error() string {
+	return "no GitHub token found\n\n" +
+		"Provide a token via one of:\n" +
+		"  1. --token flag\n" +
+		"  2. GITHUB_TOKEN environment variable\n" +
+		"  3. gh auth login (requires the gh CLI to be installed)\n\n" +
+		`The token needs the "repo" scope (or "public_repo" for public repos only).`
+}
+
+// NewClient creates an authenticated GitHub client and resolves the
+// authenticated user's login as the owner.
 func NewClient(token string) (Client, error) {
-	var ghc *gogithub.Client
-	if token != "" {
-		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-		tc := oauth2.NewClient(context.Background(), ts)
-		ghc = gogithub.NewClient(tc)
-	} else {
-		ghc = gogithub.NewClient(nil)
+	if token == "" {
+		return nil, ErrNoToken
 	}
+
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+	tc := oauth2.NewClient(context.Background(), ts)
+	ghc := gogithub.NewClient(tc)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	user, _, err := ghc.Users.Get(ctx, "")
 	if err != nil {
-		return nil, fmt.Errorf("github: resolve owner: %w", err)
+		return nil, fmt.Errorf("github: authentication failed (token may be invalid or expired): %w", err)
 	}
 	owner := user.GetLogin()
 	if owner == "" {

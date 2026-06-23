@@ -12,14 +12,33 @@ go install github.com/jahrik/repo-sync@latest
 
 Or download a pre-built binary from the [releases page](https://github.com/jahrik/repo-sync/releases).
 
-## GitHub token setup
+## Authentication
 
-repo-sync needs read access to your repositories and PR data. It resolves a
-token in this order:
+repo-sync requires a GitHub personal access token to list your repositories and
+query PR status. Without a valid token the tool will not start.
+
+### Quickstart (recommended)
+
+If you already have the [GitHub CLI](https://cli.github.com/) installed:
+
+```bash
+gh auth login
+```
+
+repo-sync automatically detects your `gh` token (whether stored in the
+system keychain or `~/.config/gh/hosts.yml`). No further configuration needed.
+
+### Alternative methods
+
+repo-sync resolves a token in this order (first match wins):
 
 1. `--token` flag
 2. `GITHUB_TOKEN` environment variable
-3. `~/.config/gh/hosts.yml` (auto-detected if you use the `gh` CLI)
+3. `~/.config/gh/hosts.yml` (gh CLI file-based storage)
+4. `gh auth token` (gh CLI keychain/encrypted storage)
+5. `token` field in config file (`.repo-sync.yml` or `~/.config/repo-sync/config.yml`)
+
+### Required scopes
 
 The token needs the `repo` scope (or `public_repo` for public repos only).
 
