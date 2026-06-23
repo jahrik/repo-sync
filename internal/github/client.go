@@ -31,8 +31,9 @@ func (e *noTokenError) Error() string {
 	return "no GitHub token found\n\n" +
 		"Provide a token via one of:\n" +
 		"  1. --token flag\n" +
-		"  2. GITHUB_TOKEN environment variable\n" +
-		"  3. gh auth login (requires the gh CLI to be installed)\n\n" +
+		"  2. token field in config file (.repo-sync.yml or ~/.config/repo-sync/config.yml)\n" +
+		"  3. GITHUB_TOKEN environment variable\n" +
+		"  4. gh auth login (uses ~/.config/gh/hosts.yml or system keychain)\n\n" +
 		`The token needs the "repo" scope (or "public_repo" for public repos only).`
 }
 
@@ -50,9 +51,12 @@ func NewClient(token string) (Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	user, _, err := ghc.Users.Get(ctx, "")
+	user, resp, err := ghc.Users.Get(ctx, "")
 	if err != nil {
-		return nil, fmt.Errorf("github: authentication failed (token may be invalid or expired): %w", err)
+		if resp != nil && resp.StatusCode == 401 {
+			return nil, fmt.Errorf("github: authentication failed (token may be invalid or expired): %w", err)
+		}
+		return nil, fmt.Errorf("github: resolve owner: %w", err)
 	}
 	owner := user.GetLogin()
 	if owner == "" {

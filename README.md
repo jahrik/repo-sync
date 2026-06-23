@@ -33,10 +33,10 @@ system keychain or `~/.config/gh/hosts.yml`). No further configuration needed.
 repo-sync resolves a token in this order (first match wins):
 
 1. `--token` flag
-2. `GITHUB_TOKEN` environment variable
-3. `~/.config/gh/hosts.yml` (gh CLI file-based storage)
-4. `gh auth token` (gh CLI keychain/encrypted storage)
-5. `token` field in config file (`.repo-sync.yml` or `~/.config/repo-sync/config.yml`)
+2. `token` field in config file (`.repo-sync.yml` or `~/.config/repo-sync/config.yml`)
+3. `GITHUB_TOKEN` environment variable
+4. `~/.config/gh/hosts.yml` (gh CLI file-based storage)
+5. `gh auth token` (gh CLI keychain/encrypted storage)
 
 ### Required scopes
 
