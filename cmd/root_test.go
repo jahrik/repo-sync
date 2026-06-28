@@ -107,7 +107,7 @@ func TestExitCodeFor(t *testing.T) {
 
 func TestResolveVersionFrom(t *testing.T) {
 	info := &debug.BuildInfo{
-		Main: debug.Module{Version: "v0.1.9"},
+		Main: debug.Module{Version: "v9.9.9"},
 		Settings: []debug.BuildSetting{
 			{Key: "vcs.revision", Value: "abcdef123456"},
 			{Key: "vcs.time", Value: "2026-06-28T20:00:00Z"},
@@ -123,8 +123,8 @@ func TestResolveVersionFrom(t *testing.T) {
 
 	t.Run("defaults are filled from build info", func(t *testing.T) {
 		version, commit, date := resolveVersionFrom(info, "dev", "none", "unknown")
-		if version != "v0.1.9" {
-			t.Errorf("version: got %q, want v0.1.9", version)
+		if version != "v9.9.9" {
+			t.Errorf("version: got %q, want v9.9.9", version)
 		}
 		if commit != "abcdef123456" {
 			t.Errorf("commit: got %q, want abcdef123456", commit)
