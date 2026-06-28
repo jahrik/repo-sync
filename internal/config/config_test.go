@@ -207,6 +207,7 @@ func TestTokenFromGHHostsMissingGithubCom(t *testing.T) {
 	}
 	t.Setenv("HOME", tmp)
 	t.Setenv("GITHUB_TOKEN", "")
+	stubGHAuthToken(t)
 
 	cfg, err := Resolve("/tmp", 10, "")
 	if err != nil {
@@ -229,6 +230,7 @@ func TestTokenFromGHHostsBadYAML(t *testing.T) {
 	}
 	t.Setenv("HOME", tmp)
 	t.Setenv("GITHUB_TOKEN", "")
+	stubGHAuthToken(t)
 
 	cfg, err := Resolve("/tmp", 10, "")
 	if err != nil {
@@ -238,6 +240,16 @@ func TestTokenFromGHHostsBadYAML(t *testing.T) {
 	if cfg.Token != "" {
 		t.Errorf("expected empty token on bad YAML, got %q", cfg.Token)
 	}
+}
+
+// stubGHAuthToken replaces the gh-CLI fallback with one that returns no token,
+// so tests exercising the fallthrough don't invoke the real gh (which reads the
+// system keyring and would leak the developer's credentials into test output).
+func stubGHAuthToken(t *testing.T) {
+	t.Helper()
+	orig := ghAuthToken
+	ghAuthToken = func() (string, error) { return "", nil }
+	t.Cleanup(func() { ghAuthToken = orig })
 }
 
 func chdir(t *testing.T, dir string) {

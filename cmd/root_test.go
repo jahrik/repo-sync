@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"runtime/debug"
 	"testing"
 
 	reposync "github.com/jahrik/repo-sync/internal/sync"
@@ -102,4 +103,42 @@ func TestExitCodeFor(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolveVersionFrom(t *testing.T) {
+	info := &debug.BuildInfo{
+		Main: debug.Module{Version: "v0.1.9"},
+		Settings: []debug.BuildSetting{
+			{Key: "vcs.revision", Value: "abcdef123456"},
+			{Key: "vcs.time", Value: "2026-06-28T20:00:00Z"},
+		},
+	}
+
+	t.Run("ldflags values pass through unchanged", func(t *testing.T) {
+		version, commit, date := resolveVersionFrom(info, "v1.2.3", "abc123", "2026-06-28")
+		if version != "v1.2.3" || commit != "abc123" || date != "2026-06-28" {
+			t.Errorf("expected explicit values preserved, got %q %q %q", version, commit, date)
+		}
+	})
+
+	t.Run("defaults are filled from build info", func(t *testing.T) {
+		version, commit, date := resolveVersionFrom(info, "dev", "none", "unknown")
+		if version != "v0.1.9" {
+			t.Errorf("version: got %q, want v0.1.9", version)
+		}
+		if commit != "abcdef123456" {
+			t.Errorf("commit: got %q, want abcdef123456", commit)
+		}
+		if date != "2026-06-28T20:00:00Z" {
+			t.Errorf("date: got %q, want 2026-06-28T20:00:00Z", date)
+		}
+	})
+
+	t.Run("devel module version does not override dev", func(t *testing.T) {
+		devel := &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}}
+		version, _, _ := resolveVersionFrom(devel, "dev", "none", "unknown")
+		if version != "dev" {
+			t.Errorf("version: got %q, want dev", version)
+		}
+	})
 }

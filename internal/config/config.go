@@ -105,7 +105,7 @@ func Resolve(dir string, limit int, token string) (Config, error) {
 			if err == nil {
 				cfg.UseSSH = useSSH
 			}
-			if t, err := tokenFromGHCLI(); err == nil {
+			if t, err := ghAuthToken(); err == nil {
 				cfg.Token = t
 			}
 		}
@@ -113,6 +113,13 @@ func Resolve(dir string, limit int, token string) (Config, error) {
 
 	return cfg, nil
 }
+
+// ghAuthToken is the gh-CLI fallback, overridable in tests. The real
+// implementation shells out to "gh auth token", which reads the system
+// keyring and therefore cannot be sandboxed via HOME/env — so tests that
+// exercise this fallthrough must stub it to avoid picking up (and logging)
+// the developer's real credentials.
+var ghAuthToken = tokenFromGHCLI
 
 // tokenFromGHCLI runs "gh auth token" to retrieve the token from whatever
 // storage backend gh uses (keychain, encrypted file, etc.).

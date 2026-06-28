@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"syscall"
@@ -51,7 +52,43 @@ Default (no flags): clone missing repos and report.
 
 // SetVersion wires build-time version information into the root command.
 func SetVersion(version, commit, date string) {
+	version, commit, date = resolveVersion(version, commit, date)
 	rootCmd.Version = fmt.Sprintf("%s (commit %s, built %s)", version, commit, date)
+}
+
+// resolveVersion fills in version metadata from the embedded build info when
+// the ldflags-injected values are still at their defaults. GoReleaser sets
+// these via ldflags for release binaries, but `go install` and `go build`
+// leave them unset, so we fall back to runtime/debug.ReadBuildInfo().
+func resolveVersion(version, commit, date string) (string, string, string) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return version, commit, date
+	}
+	return resolveVersionFrom(info, version, commit, date)
+}
+
+// resolveVersionFrom applies the build-info fallback against a given
+// *debug.BuildInfo, making the merge logic testable in isolation.
+func resolveVersionFrom(info *debug.BuildInfo, version, commit, date string) (string, string, string) {
+	if version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	}
+
+	for _, s := range info.Settings {
+		switch s.Key {
+		case "vcs.revision":
+			if commit == "none" && s.Value != "" {
+				commit = s.Value
+			}
+		case "vcs.time":
+			if date == "unknown" && s.Value != "" {
+				date = s.Value
+			}
+		}
+	}
+
+	return version, commit, date
 }
 
 // exitError wraps an error with a specific exit code.
