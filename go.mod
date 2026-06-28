@@ -7,7 +7,7 @@ require (
 	github.com/google/go-github/v72 v72.0.0
 	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/spf13/cobra v1.8.1
-	golang.org/x/oauth2 v0.21.0
+	golang.org/x/oauth2 v0.27.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
