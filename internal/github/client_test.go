@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
-	gogithub "github.com/google/go-github/v72/github"
+	gogithub "github.com/google/go-github/v88/github"
 )
 
 // newTestServer creates an httptest.Server that serves the given handler and
@@ -18,11 +17,19 @@ import (
 func newTestServer(t *testing.T, handler http.HandlerFunc) (*gogithub.Client, *httptest.Server) {
 	t.Helper()
 	srv := httptest.NewServer(handler)
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
-	return ghc, srv
+	return newGHClient(t, srv.URL), srv
+}
+
+// newGHClient builds a go-github client for tests pointed at baseURL. Since
+// v88, NewClient returns an error and the base/upload URLs are set via options
+// rather than struct fields; this centralizes both.
+func newGHClient(t *testing.T, baseURL string) *gogithub.Client {
+	t.Helper()
+	ghc, err := gogithub.NewClient(gogithub.WithURLs(&baseURL, &baseURL))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	return ghc
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}) {

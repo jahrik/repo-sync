@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	gogithub "github.com/google/go-github/v72/github"
-	"golang.org/x/oauth2"
+	gogithub "github.com/google/go-github/v88/github"
 )
 
 // Client abstracts the GitHub API calls used by repo-sync.
@@ -44,9 +43,10 @@ func NewClient(token string) (Client, error) {
 		return nil, ErrNoToken
 	}
 
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-	tc := oauth2.NewClient(context.Background(), ts)
-	ghc := gogithub.NewClient(tc)
+	ghc, err := gogithub.NewClient(gogithub.WithAuthToken(token))
+	if err != nil {
+		return nil, fmt.Errorf("github: create client: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
