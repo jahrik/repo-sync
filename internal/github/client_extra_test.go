@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	gogithub "github.com/google/go-github/v72/github"
+	gogithub "github.com/google/go-github/v88/github"
 )
 
 // stubTransport redirects all outgoing HTTP(S) requests to the given target
@@ -162,10 +162,7 @@ func TestListPRsRateLimitRetry(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
+	ghc := newGHClient(t, srv.URL)
 
 	c := buildClientWithGHC(ghc, "testuser")
 	got, err := c.ListOpenPRs(context.Background(), "testuser", "myrepo", "feat")
@@ -201,10 +198,7 @@ func TestListPRsRateLimitRetryFails(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
+	ghc := newGHClient(t, srv.URL)
 
 	c := buildClientWithGHC(ghc, "testuser")
 	_, err := c.ListOpenPRs(context.Background(), "testuser", "myrepo", "feat")
@@ -241,10 +235,7 @@ func TestListReposRateLimitRetry(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
+	ghc := newGHClient(t, srv.URL)
 
 	c := buildClientWithGHC(ghc, "testuser")
 	got, err := c.ListRepos(context.Background(), 10)
@@ -278,10 +269,7 @@ func TestListReposRateLimitRetryFails(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
+	ghc := newGHClient(t, srv.URL)
 
 	c := buildClientWithGHC(ghc, "testuser")
 	_, err := c.ListRepos(context.Background(), 10)
@@ -310,10 +298,7 @@ func TestListPRsContextCancelledDuringRateLimitWait(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
+	ghc := newGHClient(t, srv.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -344,10 +329,7 @@ func TestListReposContextCancelledDuringRateLimitWait(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ghc := gogithub.NewClient(nil)
-	u, _ := url.Parse(srv.URL + "/")
-	ghc.BaseURL = u
-	ghc.UploadURL = u
+	ghc := newGHClient(t, srv.URL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()

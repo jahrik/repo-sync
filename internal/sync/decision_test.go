@@ -3,7 +3,7 @@ package sync
 import (
 	"testing"
 
-	gogithub "github.com/google/go-github/v72/github"
+	gogithub "github.com/google/go-github/v88/github"
 )
 
 func strPtr(s string) *string { return &s }

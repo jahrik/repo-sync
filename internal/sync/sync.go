@@ -15,7 +15,7 @@ import (
 	"github.com/jahrik/repo-sync/internal/git"
 	githubclient "github.com/jahrik/repo-sync/internal/github"
 
-	gogithub "github.com/google/go-github/v72/github"
+	gogithub "github.com/google/go-github/v88/github"
 )
 
 // Run is the top-level sync orchestration.

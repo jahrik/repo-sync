@@ -1,6 +1,6 @@
 package sync
 
-import gogithub "github.com/google/go-github/v72/github"
+import gogithub "github.com/google/go-github/v88/github"
 
 // Status is the outcome of syncing a single repository.
 type Status string

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	gogithub "github.com/google/go-github/v72/github"
+	gogithub "github.com/google/go-github/v88/github"
 	"github.com/jahrik/repo-sync/internal/config"
 )
 
