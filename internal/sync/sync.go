@@ -433,22 +433,18 @@ func syncOne(
 	if cfg.Fetch || cfg.Pull {
 		decided.StaleBranches = staleBranches(gitRunner, dir, defaultBranch)
 
-		if cfg.PruneMerged && len(decided.StaleBranches) > 0 {
-			if cfg.Pull || cfg.Checkout {
-				if decided.Branch == decided.DefaultBranch {
-					var pruned []string
-					var stale []string
-					for _, b := range decided.StaleBranches {
-						if err := gitRunner.DeleteBranch(dir, b, false); err == nil {
-							pruned = append(pruned, b)
-						} else {
-							stale = append(stale, b)
-						}
-					}
-					decided.PrunedBranches = pruned
-					decided.StaleBranches = stale
+		if cfg.PruneMerged && cfg.Pull && decided.Branch == decided.DefaultBranch {
+			var pruned []string
+			var stale []string
+			for _, b := range decided.StaleBranches {
+				if err := gitRunner.DeleteBranch(dir, b, false); err == nil {
+					pruned = append(pruned, b)
+				} else {
+					stale = append(stale, b)
 				}
 			}
+			decided.PrunedBranches = pruned
+			decided.StaleBranches = stale
 		}
 	}
 

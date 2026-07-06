@@ -149,6 +149,11 @@ func TestFormatResultAllBranches(t *testing.T) {
 			result:   sync.RepoResult{Name: "r", Status: sync.StatusOK, StaleBranches: []string{"old-branch", "other"}},
 			contains: []string{"stale:", "old-branch", "other"},
 		},
+		{
+			name:     "Pruned branches listed",
+			result:   sync.RepoResult{Name: "r", Status: sync.StatusOK, PrunedBranches: []string{"deleted-branch", "another"}},
+			contains: []string{"pruned:", "deleted-branch", "another"},
+		},
 	}
 
 	for _, tc := range tests {
