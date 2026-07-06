@@ -124,7 +124,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagSkipForks, "skip-forks", false, "exclude forked repositories")
 	rootCmd.PersistentFlags().BoolVar(&flagSkipArchived, "skip-archived", false, "exclude archived repositories")
 	rootCmd.PersistentFlags().BoolVar(&flagReportOrphans, "report-orphans", false, "report local directories that have no matching GitHub repo")
-	rootCmd.PersistentFlags().BoolVar(&flagPruneMerged, "prune-merged", false, "delete local branches that are fully merged or have deleted remotes (writes require --pull)")
+	rootCmd.PersistentFlags().BoolVar(&flagPruneMerged, "prune-merged", false, "delete local branches that git considers merged (writes require --pull)")
 	rootCmd.PersistentFlags().StringVar(&flagFormat, "format", "text", "output format: text or json")
 	rootCmd.PersistentFlags().StringVar(&flagFilter, "filter", "", "regexp to filter repos by name (empty = all)")
 	rootCmd.PersistentFlags().StringArrayVar(&flagIgnore, "ignore", nil, "local directory name to exclude from orphan reports (repeatable)")

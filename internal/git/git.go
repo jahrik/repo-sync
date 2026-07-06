@@ -142,7 +142,7 @@ func (r *runner) DeleteBranch(dir, branch string, force bool) error {
 	if force {
 		flag = "-D"
 	}
-	_, err := run(dir, "branch", flag, branch)
+	_, err := run(dir, "branch", flag, "--", branch)
 	if err != nil {
 		return fmt.Errorf("git branch %s in %s: %w", flag, dir, err)
 	}
