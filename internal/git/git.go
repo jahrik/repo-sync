@@ -22,6 +22,7 @@ type Runner interface {
 	AheadBehind(dir, branch, defaultBranch string) (ahead, behind int, err error)
 	PullFFOnly(dir string) error
 	CheckoutBranch(dir, branch string) error
+	DeleteBranch(dir, branch string, force bool) error
 	MergedBranches(dir, defaultBranch string) ([]string, error)
 	GoneBranches(dir string) ([]string, error)
 	StatusDirty(dir string) (bool, error)
@@ -132,6 +133,18 @@ func (r *runner) CheckoutBranch(dir, branch string) error {
 	_, err := run(dir, "checkout", branch)
 	if err != nil {
 		return fmt.Errorf("git checkout in %s: %w", dir, err)
+	}
+	return nil
+}
+
+func (r *runner) DeleteBranch(dir, branch string, force bool) error {
+	flag := "-d"
+	if force {
+		flag = "-D"
+	}
+	_, err := run(dir, "branch", flag, "--", branch)
+	if err != nil {
+		return fmt.Errorf("git branch %s -- %s in %s: %w", flag, branch, dir, err)
 	}
 	return nil
 }

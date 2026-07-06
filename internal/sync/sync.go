@@ -432,6 +432,20 @@ func syncOne(
 	// With --fetch or --pull: report local branches that are merged or gone.
 	if cfg.Fetch || cfg.Pull {
 		decided.StaleBranches = staleBranches(gitRunner, dir, defaultBranch)
+
+		if cfg.PruneMerged && cfg.Pull && decided.Branch == decided.DefaultBranch {
+			var pruned []string
+			var stale []string
+			for _, b := range decided.StaleBranches {
+				if err := gitRunner.DeleteBranch(dir, b, false); err == nil {
+					pruned = append(pruned, b)
+				} else {
+					stale = append(stale, b)
+				}
+			}
+			decided.PrunedBranches = pruned
+			decided.StaleBranches = stale
+		}
 	}
 
 	return decided
