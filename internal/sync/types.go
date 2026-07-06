@@ -20,16 +20,17 @@ const (
 
 // RepoResult is the result of processing one repository.
 type RepoResult struct {
-	Name          string
-	Status        Status
-	Branch        string // current branch
-	DefaultBranch string // repo's default branch
-	PRNumber      int
-	PRTitle       string
-	Ahead         int
-	Behind        int
-	Err           error
-	StaleBranches []string // local branches that are merged or gone (reported under --fetch/--pull)
+	Name           string
+	Status         Status
+	Branch         string // current branch
+	DefaultBranch  string // repo's default branch
+	PRNumber       int
+	PRTitle        string
+	Ahead          int
+	Behind         int
+	Err            error
+	StaleBranches  []string // local branches that are merged or gone (reported under --fetch/--pull)
+	PrunedBranches []string // local branches that were actually deleted
 }
 
 // DecisionInput holds all facts needed to decide what to do with a repo.

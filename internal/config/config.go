@@ -23,6 +23,7 @@ type Config struct {
 	SkipForks     bool     // exclude forked repositories
 	SkipArchived  bool     // exclude archived repositories
 	ReportOrphans bool     // report local dirs with no matching GitHub repo
+	PruneMerged   bool     // delete merged/stale branches (requires Pull/Checkout for writes)
 	Format        string   // output format: "text" (default) or "json"
 	Filter        string   // regexp to match against repo name (empty = all)
 	Ignore        []string // local directory names to exclude from orphan reports
@@ -41,6 +42,7 @@ type FileConfig struct {
 	SkipForks     *bool     `yaml:"skip_forks"`
 	SkipArchived  *bool     `yaml:"skip_archived"`
 	ReportOrphans *bool     `yaml:"report_orphans"`
+	PruneMerged   *bool     `yaml:"prune_merged"`
 	Format        *string   `yaml:"format"`
 	Filter        *string   `yaml:"filter"`
 	Ignore        *[]string `yaml:"ignore"`

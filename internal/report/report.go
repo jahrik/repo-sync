@@ -41,17 +41,19 @@ const labelWidth = 10
 
 // detailStyles holds per-element styles for the detail column.
 type detailStyles struct {
-	branch    lipgloss.Style // current branch name
-	arrow     lipgloss.Style // → separator between branch and default
-	def       lipgloss.Style // default branch name (when showing → main)
-	count     lipgloss.Style // ↓N, +N, ↑N
-	pr        lipgloss.Style // #42 PR title
-	staleHdr  lipgloss.Style // "stale:"
-	staleName lipgloss.Style // individual stale branch names
-	errHdr    lipgloss.Style // "ERR:"
-	errMsg    lipgloss.Style // error message text
-	muted     lipgloss.Style // "no PR", "ahead", "uncommitted", "diverged"
-	sep       lipgloss.Style // · separator
+	branch     lipgloss.Style // current branch name
+	arrow      lipgloss.Style // → separator between branch and default
+	def        lipgloss.Style // default branch name (when showing → main)
+	count      lipgloss.Style // ↓N, +N, ↑N
+	pr         lipgloss.Style // #42 PR title
+	prunedHdr  lipgloss.Style // "pruned:"
+	prunedName lipgloss.Style // individual pruned branch names
+	staleHdr   lipgloss.Style // "stale:"
+	staleName  lipgloss.Style // individual stale branch names
+	errHdr     lipgloss.Style // "ERR:"
+	errMsg     lipgloss.Style // error message text
+	muted      lipgloss.Style // "no PR", "ahead", "uncommitted", "diverged"
+	sep        lipgloss.Style // · separator
 }
 
 // Print writes a formatted report of sync results to w.
@@ -89,17 +91,19 @@ func Print(results []sync.RepoResult, w io.Writer) {
 	}
 
 	ds := detailStyles{
-		branch:    rend.NewStyle().Foreground(blue).Bold(true),
-		arrow:     rend.NewStyle().Foreground(muted),
-		def:       rend.NewStyle().Foreground(muted),
-		count:     rend.NewStyle().Foreground(yellow).Bold(true),
-		pr:        rend.NewStyle().Foreground(magenta),
-		staleHdr:  rend.NewStyle().Foreground(yellow).Bold(true),
-		staleName: rend.NewStyle().Foreground(yellow),
-		errHdr:    rend.NewStyle().Foreground(red).Bold(true),
-		errMsg:    rend.NewStyle().Foreground(red),
-		muted:     rend.NewStyle().Foreground(muted),
-		sep:       rend.NewStyle().Foreground(muted),
+		branch:     rend.NewStyle().Foreground(blue).Bold(true),
+		arrow:      rend.NewStyle().Foreground(muted),
+		def:        rend.NewStyle().Foreground(muted),
+		count:      rend.NewStyle().Foreground(yellow).Bold(true),
+		pr:         rend.NewStyle().Foreground(magenta),
+		prunedHdr:  rend.NewStyle().Foreground(green).Bold(true),
+		prunedName: rend.NewStyle().Foreground(green),
+		staleHdr:   rend.NewStyle().Foreground(yellow).Bold(true),
+		staleName:  rend.NewStyle().Foreground(yellow),
+		errHdr:     rend.NewStyle().Foreground(red).Bold(true),
+		errMsg:     rend.NewStyle().Foreground(red),
+		muted:      rend.NewStyle().Foreground(muted),
+		sep:        rend.NewStyle().Foreground(muted),
 	}
 
 	nameStyle := rend.NewStyle().Bold(true)
@@ -238,6 +242,16 @@ func buildDetailParts(r sync.RepoResult, ds detailStyles) []string {
 		}
 	}
 
+	// Pruned branches.
+	if len(r.PrunedBranches) > 0 {
+		names := make([]string, len(r.PrunedBranches))
+		for i, b := range r.PrunedBranches {
+			names[i] = ds.prunedName.Render(b)
+		}
+		parts = append(parts,
+			ds.prunedHdr.Render("pruned:")+ds.muted.Render(" ")+strings.Join(names, ds.muted.Render(", ")))
+	}
+
 	// Stale branches (shown for any status that has them).
 	if len(r.StaleBranches) > 0 {
 		names := make([]string, len(r.StaleBranches))
@@ -253,16 +267,17 @@ func buildDetailParts(r sync.RepoResult, ds detailStyles) []string {
 
 // jsonResult is the JSON-serializable form of a RepoResult.
 type jsonResult struct {
-	Name          string   `json:"name"`
-	Status        string   `json:"status"`
-	Branch        string   `json:"branch,omitempty"`
-	DefaultBranch string   `json:"default_branch,omitempty"`
-	PRNumber      int      `json:"pr_number,omitempty"`
-	PRTitle       string   `json:"pr_title,omitempty"`
-	Ahead         int      `json:"ahead,omitempty"`
-	Behind        int      `json:"behind,omitempty"`
-	StaleBranches []string `json:"stale_branches,omitempty"`
-	Err           string   `json:"error,omitempty"`
+	Name           string   `json:"name"`
+	Status         string   `json:"status"`
+	Branch         string   `json:"branch,omitempty"`
+	DefaultBranch  string   `json:"default_branch,omitempty"`
+	PRNumber       int      `json:"pr_number,omitempty"`
+	PRTitle        string   `json:"pr_title,omitempty"`
+	Ahead          int      `json:"ahead,omitempty"`
+	Behind         int      `json:"behind,omitempty"`
+	StaleBranches  []string `json:"stale_branches,omitempty"`
+	PrunedBranches []string `json:"pruned_branches,omitempty"`
+	Err            string   `json:"error,omitempty"`
 }
 
 // PrintJSON writes results as a JSON array to w.
@@ -270,15 +285,16 @@ func PrintJSON(results []sync.RepoResult, w io.Writer) error {
 	out := make([]jsonResult, len(results))
 	for i, r := range results {
 		j := jsonResult{
-			Name:          r.Name,
-			Status:        string(r.Status),
-			Branch:        r.Branch,
-			DefaultBranch: r.DefaultBranch,
-			PRNumber:      r.PRNumber,
-			PRTitle:       r.PRTitle,
-			Ahead:         r.Ahead,
-			Behind:        r.Behind,
-			StaleBranches: r.StaleBranches,
+			Name:           r.Name,
+			Status:         string(r.Status),
+			Branch:         r.Branch,
+			DefaultBranch:  r.DefaultBranch,
+			PRNumber:       r.PRNumber,
+			PRTitle:        r.PRTitle,
+			Ahead:          r.Ahead,
+			Behind:         r.Behind,
+			StaleBranches:  r.StaleBranches,
+			PrunedBranches: r.PrunedBranches,
 		}
 		if r.Err != nil {
 			j.Err = r.Err.Error()

@@ -386,3 +386,55 @@ func (f *fakeGHClientWithPRs) ListMergedPRs(_ context.Context, _, _, _ string) (
 }
 
 func intPtrS(i int) *int { return &i }
+
+type fakeGitRunnerMergedBranches struct {
+	fakeGitRunner
+}
+
+func (f *fakeGitRunnerMergedBranches) MergedBranches(_, _ string) ([]string, error) {
+	return []string{"main", "feat/done1", "feat/done2"}, nil
+}
+
+func TestSyncOnePruneMerged(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "prune-repo"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{Name: strPtrS(repoName), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/t/prune.git")},
+		},
+	}
+
+	gitRunner := &fakeGitRunnerMergedBranches{
+		fakeGitRunner: fakeGitRunner{
+			isGitRepo:     true,
+			defaultBranch: "main",
+			currentBranch: "main",
+			remoteURL:     "https://github.com/t/prune.git",
+			ahead:         0,
+		},
+	}
+
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true, PruneMerged: true}
+	result := syncOne(context.Background(), cfg, gh, gitRunner, repoDir, nil)
+
+	if len(result.PrunedBranches) != 2 {
+		t.Errorf("expected 2 pruned branches, got %v", result.PrunedBranches)
+	}
+	if len(result.StaleBranches) != 0 {
+		t.Errorf("expected 0 stale branches (they should be pruned), got %v", result.StaleBranches)
+	}
+	if len(gitRunner.deletedBranches) != 2 {
+		t.Errorf("expected 2 deleted branches, got %v", gitRunner.deletedBranches)
+	}
+	// Verify "main" was skipped
+	for _, b := range gitRunner.deletedBranches {
+		if b == "main" {
+			t.Errorf("main branch was deleted")
+		}
+	}
+}

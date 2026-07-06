@@ -32,6 +32,7 @@ var (
 	flagSkipForks     bool
 	flagSkipArchived  bool
 	flagReportOrphans bool
+	flagPruneMerged   bool
 	flagFormat        string
 	flagFilter        string
 	flagIgnore        []string
@@ -123,6 +124,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagSkipForks, "skip-forks", false, "exclude forked repositories")
 	rootCmd.PersistentFlags().BoolVar(&flagSkipArchived, "skip-archived", false, "exclude archived repositories")
 	rootCmd.PersistentFlags().BoolVar(&flagReportOrphans, "report-orphans", false, "report local directories that have no matching GitHub repo")
+	rootCmd.PersistentFlags().BoolVar(&flagPruneMerged, "prune-merged", false, "delete local branches that are fully merged or have deleted remotes (writes require --pull)")
 	rootCmd.PersistentFlags().StringVar(&flagFormat, "format", "text", "output format: text or json")
 	rootCmd.PersistentFlags().StringVar(&flagFilter, "filter", "", "regexp to filter repos by name (empty = all)")
 	rootCmd.PersistentFlags().StringArrayVar(&flagIgnore, "ignore", nil, "local directory name to exclude from orphan reports (repeatable)")
@@ -165,6 +167,7 @@ func run(cmd *cobra.Command, _ []string) error {
 	applyFileBool("skip-forks", fc.SkipForks)
 	applyFileBool("skip-archived", fc.SkipArchived)
 	applyFileBool("report-orphans", fc.ReportOrphans)
+	applyFileBool("prune-merged", fc.PruneMerged)
 	applyFileString("format", fc.Format)
 	applyFileString("filter", fc.Filter)
 	if fc.Ignore != nil && !flags.Changed("ignore") {
@@ -181,6 +184,7 @@ func run(cmd *cobra.Command, _ []string) error {
 	cfg.SkipForks = flagSkipForks
 	cfg.SkipArchived = flagSkipArchived
 	cfg.ReportOrphans = flagReportOrphans
+	cfg.PruneMerged = flagPruneMerged
 	cfg.Format = flagFormat
 	cfg.Filter = flagFilter
 	cfg.Ignore = flagIgnore
