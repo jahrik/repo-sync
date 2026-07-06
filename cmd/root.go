@@ -178,7 +178,7 @@ func run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
-	cfg.Fetch = flagFetch || flagPull || flagCheckout
+	cfg.Fetch = flagFetch || flagPull || flagCheckout || flagPruneMerged
 	cfg.Pull = flagPull || flagCheckout
 	cfg.Checkout = flagCheckout
 	cfg.SkipForks = flagSkipForks
