@@ -470,3 +470,39 @@ func TestSyncOnePruneMergedSkipsNonDefault(t *testing.T) {
 		t.Errorf("expected 0 deleted branches, got %v", gitRunner.deletedBranches)
 	}
 }
+
+func TestSyncOnePruneMergedDeleteFails(t *testing.T) {
+	baseDir := t.TempDir()
+	repoName := "prune-repo-fails"
+	repoDir := filepath.Join(baseDir, repoName)
+	if err := os.MkdirAll(repoDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	gh := &fakeGHClient{
+		repos: []*gogithub.Repository{
+			{Name: strPtrS(repoName), DefaultBranch: strPtrS("main"), CloneURL: strPtrS("https://github.com/t/prune.git")},
+		},
+	}
+
+	gitRunner := &fakeGitRunnerMergedBranches{
+		fakeGitRunner: fakeGitRunner{
+			isGitRepo:       true,
+			defaultBranch:   "main",
+			currentBranch:   "main",
+			remoteURL:       "https://github.com/t/prune.git",
+			ahead:           0,
+			deleteBranchErr: os.ErrInvalid,
+		},
+	}
+
+	cfg := config.Config{Dir: baseDir, Limit: 10, Pull: true, PruneMerged: true}
+	result := syncOne(context.Background(), cfg, gh, gitRunner, repoDir, nil)
+
+	if len(result.PrunedBranches) != 0 {
+		t.Errorf("expected 0 pruned branches, got %v", result.PrunedBranches)
+	}
+	if len(result.StaleBranches) != 2 {
+		t.Errorf("expected 2 stale branches, got %v", result.StaleBranches)
+	}
+}

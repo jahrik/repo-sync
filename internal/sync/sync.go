@@ -439,10 +439,6 @@ func syncOne(
 					var pruned []string
 					var stale []string
 					for _, b := range decided.StaleBranches {
-						if b == decided.Branch {
-							stale = append(stale, b)
-							continue
-						}
 						if err := gitRunner.DeleteBranch(dir, b, false); err == nil {
 							pruned = append(pruned, b)
 						} else {

@@ -55,6 +55,7 @@ Flags:
       --skip-forks       exclude forked repositories
       --skip-archived    exclude archived repositories
       --report-orphans   report local directories with no matching GitHub repo
+      --prune-merged     delete local branches that git considers merged (writes require --pull)
       --format string    output format: text or json (default "text")
       --filter string    regexp to filter repos by name (empty = all)
       --owner string     GitHub user or org to sync (default: authenticated user)
@@ -156,6 +157,14 @@ Useful for spotting repos you deleted on GitHub but still have locally:
 repo-sync --report-orphans
 ```
 
+### `--prune-merged`
+
+Automatically delete local branches that git considers merged into the default branch (using `git branch -d`). This only takes effect if the working tree is on the default branch and `--pull` or `--checkout` is specified. Unmerged branches are left untouched.
+
+```bash
+repo-sync --pull --prune-merged
+```
+
 ### `--filter`
 
 Process only repos whose name matches a regular expression. Applied after
@@ -198,6 +207,7 @@ skip_archived: true
 # fetch: true
 # pull: true
 # checkout: true
+# prune_merged: false
 # owner: myorg
 # format: text
 # report_orphans: false
