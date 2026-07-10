@@ -39,7 +39,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "repo-sync",
+	Use:   "rs",
 	Short: "Sync all your GitHub repositories",
 	Long: `repo-sync clones any repositories you don't have locally yet, then
 optionally pulls updates and cleans up merged branches.

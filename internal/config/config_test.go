@@ -279,10 +279,10 @@ func TestLoadFileConfigNoFile(t *testing.T) {
 func TestLoadFileConfigCWD(t *testing.T) {
 	tmp := t.TempDir()
 	chdir(t, tmp)
-	t.Setenv("HOME", t.TempDir()) // no ~/.config/repo-sync/config.yml
+	t.Setenv("HOME", t.TempDir()) // no ~/.config/rs/config.yml
 
 	yml := "dir: ~/mycode\nlimit: 50\nskip_forks: true\n"
-	if err := os.WriteFile(filepath.Join(tmp, ".repo-sync.yml"), []byte(yml), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(tmp, ".rs.yml"), []byte(yml), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -303,10 +303,10 @@ func TestLoadFileConfigCWD(t *testing.T) {
 
 func TestLoadFileConfigHomeDir(t *testing.T) {
 	tmp := t.TempDir()
-	chdir(t, t.TempDir()) // CWD has no .repo-sync.yml
+	chdir(t, t.TempDir()) // CWD has no .rs.yml
 	t.Setenv("HOME", tmp)
 
-	cfgDir := filepath.Join(tmp, ".config", "repo-sync")
+	cfgDir := filepath.Join(tmp, ".config", "rs")
 	if err := os.MkdirAll(cfgDir, 0755); err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-# repo-sync
+# rs (repo-sync)
 
 Syncs all your GitHub repositories to a local directory. By default it clones
 any repos you don't have locally. With `--fetch`, `--pull`, or `--checkout` it
@@ -7,14 +7,14 @@ also inspects existing repos and reports their status.
 ## Install
 
 ```bash
-go install github.com/jahrik/repo-sync@latest
+go install github.com/jahrik/repo-sync/cmd/rs@latest
 ```
 
 Or download a pre-built binary from the [releases page](https://github.com/jahrik/repo-sync/releases).
 
 ## Authentication
 
-repo-sync requires a GitHub personal access token to list your repositories and
+rs requires a GitHub personal access token to list your repositories and
 query PR status. Without a valid token the tool will not start.
 
 ### Quickstart (recommended)
@@ -25,15 +25,15 @@ If you already have the [GitHub CLI](https://cli.github.com/) installed:
 gh auth login
 ```
 
-repo-sync automatically detects your `gh` token (whether stored in the
+rs automatically detects your `gh` token (whether stored in the
 system keychain or `~/.config/gh/hosts.yml`). No further configuration needed.
 
 ### Alternative methods
 
-repo-sync resolves a token in this order (first match wins):
+rs resolves a token in this order (first match wins):
 
 1. `--token` flag
-2. `token` field in config file (`.repo-sync.yml` or `~/.config/repo-sync/config.yml`)
+2. `token` field in config file (`.rs.yml` or `~/.config/rs/config.yml`)
 3. `GITHUB_TOKEN` environment variable
 4. `~/.config/gh/hosts.yml` (gh CLI file-based storage)
 5. `gh auth token` (gh CLI keychain/encrypted storage)
@@ -45,7 +45,7 @@ The token needs the `repo` scope (or `public_repo` for public repos only).
 ## Usage
 
 ```
-repo-sync [flags]
+rs [flags]
 
 Flags:
       --dir string       directory containing your local clones (default "~/github")
@@ -61,8 +61,8 @@ Flags:
       --owner string     GitHub user or org to sync (default: authenticated user)
       --limit int        maximum number of repositories to fetch (default 200)
       --token string     GitHub personal access token
-  -h, --help             help for repo-sync
-      --version          version for repo-sync
+  -h, --help             help for rs
+      --version          version for rs
 ```
 
 ## Modes
@@ -70,7 +70,7 @@ Flags:
 ### Default — clone only
 
 ```bash
-repo-sync
+rs
 ```
 
 Fetches the repository list from GitHub and clones any repos not already present
@@ -80,7 +80,7 @@ No network traffic beyond the API call and any clones.
 ### `--fetch` — read-only status
 
 ```bash
-repo-sync --fetch
+rs --fetch
 ```
 
 Runs `git fetch --prune` on every existing repo and reports full branch status
@@ -94,12 +94,12 @@ Use `--fetch` when you want a status snapshot without committing to any pulls.
 ### `--pull` — fast-forward pull
 
 ```bash
-repo-sync --pull
+rs --pull
 ```
 
 Everything `--fetch` does, plus runs `git pull --ff-only` on repos whose default
 branch is behind origin. The `--ff-only` flag means the pull is refused if the
-history has diverged — repo-sync will never create a merge commit or silently
+history has diverged — rs will never create a merge commit or silently
 rebase. A diverged repo is reported as `DIRTY` so you can resolve it manually.
 
 `--pull` implies `--fetch`.
@@ -107,7 +107,7 @@ rebase. A diverged repo is reported as `DIRTY` so you can resolve it manually.
 ### `--checkout` — clean up SYNCED repos
 
 ```bash
-repo-sync --checkout
+rs --checkout
 ```
 
 Everything `--pull` does, plus automatically switches `SYNCED` repos back to
@@ -120,16 +120,16 @@ dirty the checkout is skipped rather than risking data loss.
 
 ## How modes relate to git
 
-| repo-sync flag | Equivalent git behaviour |
-|----------------|--------------------------|
-| *(none)*       | `git clone` for missing repos only |
-| `--fetch`      | `git fetch --prune` — updates remote refs, no working-tree changes |
-| `--pull`       | `git fetch --prune` + `git pull --ff-only` on the default branch |
-| `--checkout`   | `--pull` + `git checkout <default>` on SYNCED repos |
+| rs flag      | Equivalent git behaviour |
+|--------------|--------------------------|
+| *(none)*     | `git clone` for missing repos only |
+| `--fetch`    | `git fetch --prune` — updates remote refs, no working-tree changes |
+| `--pull`     | `git fetch --prune` + `git pull --ff-only` on the default branch |
+| `--checkout` | `--pull` + `git checkout <default>` on SYNCED repos |
 
 Key differences from plain `git pull`:
 
-- **Default branch only.** repo-sync only pulls the default branch (`main`,
+- **Default branch only.** rs only pulls the default branch (`main`,
   `master`, etc.). If you are on a feature branch it is reported but not
   touched.
 - **Fast-forward only.** We use `--ff-only`, so diverged histories are flagged
@@ -145,7 +145,7 @@ Key differences from plain `git pull`:
 Exclude forked or archived repositories from the sync entirely:
 
 ```bash
-repo-sync --skip-forks --skip-archived
+rs --skip-forks --skip-archived
 ```
 
 ### `--report-orphans`
@@ -154,7 +154,7 @@ Report local directories under `--dir` that have no matching GitHub repository.
 Useful for spotting repos you deleted on GitHub but still have locally:
 
 ```bash
-repo-sync --report-orphans
+rs --report-orphans
 ```
 
 ### `--prune-merged`
@@ -162,7 +162,7 @@ repo-sync --report-orphans
 Automatically delete local branches that git considers merged into the default branch (using `git branch -d`). This only takes effect if the working tree is on the default branch and `--pull` or `--checkout` is specified. Unmerged branches are left untouched.
 
 ```bash
-repo-sync --pull --prune-merged
+rs --pull --prune-merged
 ```
 
 ### `--filter`
@@ -171,8 +171,8 @@ Process only repos whose name matches a regular expression. Applied after
 `--skip-forks` and `--skip-archived`:
 
 ```bash
-repo-sync --fetch --filter '^ansible-'   # repos starting with "ansible-"
-repo-sync --pull  --filter 'api|gateway' # repos containing "api" or "gateway"
+rs --fetch --filter '^ansible-'   # repos starting with "ansible-"
+rs --pull  --filter 'api|gateway' # repos containing "api" or "gateway"
 ```
 
 Plain substrings work too — the pattern is anchored nowhere, so `--filter foo`
@@ -183,7 +183,7 @@ matches any repo whose name contains `foo`.
 Output results as a JSON array instead of the text report. Useful for scripting:
 
 ```bash
-repo-sync --fetch --format json | jq '.[] | select(.status == "BEHIND")'
+rs --fetch --format json | jq '.[] | select(.status == "BEHIND")'
 ```
 
 Each object includes: `name`, `status`, `branch`, `default_branch`, `ahead`, `behind`,
@@ -191,15 +191,15 @@ Each object includes: `name`, `status`, `branch`, `default_branch`, `ahead`, `be
 
 ## Config file
 
-repo-sync looks for a config file in two places (first match wins):
+rs looks for a config file in two places (first match wins):
 
-1. `.repo-sync.yml` in the current directory
-2. `~/.config/repo-sync/config.yml`
+1. `.rs.yml` in the current directory
+2. `~/.config/rs/config.yml`
 
 Any flag can be set in the config file. CLI flags always override the file.
 
 ```yaml
-# .repo-sync.yml
+# .rs.yml
 dir: ~/github
 limit: 200
 skip_forks: true

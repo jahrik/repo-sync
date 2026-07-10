@@ -55,10 +55,10 @@ jobs:
           cache: true
 
       - name: Build linux/amd64
-        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o repo-sync-linux-amd64 .
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o rs-linux-amd64 ./cmd/rs
 
       - name: Upload binary
         uses: actions/upload-artifact@v7
         with:
-          name: repo-sync-linux-amd64
-          path: repo-sync-linux-amd64
+          name: rs-linux-amd64
+          path: rs-linux-amd64
