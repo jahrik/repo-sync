@@ -20,7 +20,7 @@ Go is at `~/.local/go/bin/go` on this machine. Use `PATH="$HOME/.local/go/bin:$P
 ## Architecture
 
 ```
-main.go
+cmd/rs/main.go       — binary entry point (ldflags wiring)
 cmd/root.go          — cobra entry point, flag wiring, progress bar, exit codes
 internal/config/     — Config struct, flag→config resolution, file config loader
 internal/github/     — Client interface + real GitHub API implementation
@@ -62,7 +62,7 @@ Three modes, selected by flags:
 
 ### Config layering (highest priority first)
 
-CLI flag → `.repo-sync.yml` (CWD) or `~/.config/repo-sync/config.yml` → `GITHUB_TOKEN` env → `~/.config/gh/hosts.yml` → `gh auth token` (keychain/encrypted storage)
+CLI flag → `.rs.yml` (CWD) or `~/.config/rs/config.yml` → `GITHUB_TOKEN` env → `~/.config/gh/hosts.yml` → `gh auth token` (keychain/encrypted storage)
 
 `FileConfig` uses pointer fields so unset YAML keys don't override flag defaults. `cmd.Flags().Changed(name)` detects whether the user explicitly set a flag before applying file values.
 
@@ -96,4 +96,4 @@ CLI flag → `.repo-sync.yml` (CWD) or `~/.config/repo-sync/config.yml` → `GIT
 
 - `.github/workflows/ci.yml` — triggers on `pull_request`; runs `go vet`, `go test -race`, golangci-lint, build
 - `.github/workflows/release.yml` — triggers on `v*` tags; runs GoReleaser for linux/darwin amd64/arm64
-- `.goreleaser.yml` — GoReleaser config; archives include LICENSE and README
+- `.goreleaser.yml` — GoReleaser config; binary name `rs`, archives include LICENSE and README

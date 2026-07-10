@@ -1,6 +1,6 @@
 version: 2
 
-project_name: repo-sync
+project_name: rs
 
 before:
   hooks:
@@ -8,7 +8,9 @@ before:
     - go vet ./...
 
 builds:
-  - env:
+  - main: ./cmd/rs
+    binary: rs
+    env:
       - CGO_ENABLED=0
     goos:
       - linux

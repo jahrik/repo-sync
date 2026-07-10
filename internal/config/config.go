@@ -48,15 +48,15 @@ type FileConfig struct {
 	Ignore        *[]string `yaml:"ignore"`
 }
 
-// LoadFileConfig reads the first config file found: .repo-sync.yml in the
-// current directory, then ~/.config/repo-sync/config.yml. Returns an empty
+// LoadFileConfig reads the first config file found: .rs.yml in the
+// current directory, then ~/.config/rs/config.yml. Returns an empty
 // FileConfig (not an error) when no file exists.
 func LoadFileConfig() (FileConfig, error) {
 	var fc FileConfig
 
-	candidates := []string{".repo-sync.yml"}
+	candidates := []string{".rs.yml"}
 	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, ".config", "repo-sync", "config.yml"))
+		candidates = append(candidates, filepath.Join(home, ".config", "rs", "config.yml"))
 	}
 
 	for _, path := range candidates {
