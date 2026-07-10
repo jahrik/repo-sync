@@ -41,7 +41,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "rs",
 	Short: "Sync all your GitHub repositories",
-	Long: `repo-sync clones any repositories you don't have locally yet, then
+	Long: `rs clones any repositories you don't have locally yet, then
 optionally pulls updates and cleans up merged branches.
 
 Default (no flags): clone missing repos and report.
